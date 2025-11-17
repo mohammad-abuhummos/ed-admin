@@ -52,7 +52,7 @@ export const saveHeroSlide = async (slide: HeroSlide): Promise<void> => {
       const maxOrderQuery = query(slidesRef, orderBy("order", "desc"));
       const snapshot = await getDocs(maxOrderQuery);
       const maxOrder = snapshot.empty ? 0 : (snapshot.docs[0].data().order || 0);
-      
+
       await setDoc(doc(slidesRef), {
         ...slide,
         order: maxOrder + 1,
@@ -171,7 +171,7 @@ export const deleteProduct = async (productId: string): Promise<void> => {
     const productDoc = await getDoc(doc(db, "products", productId));
     if (productDoc.exists()) {
       const productData = productDoc.data() as Product;
-      
+
       // Delete images from storage
       const imagesToDelete = [
         productData.mainImage,
@@ -195,6 +195,192 @@ export const deleteProduct = async (productId: string): Promise<void> => {
     }
   } catch (error) {
     console.error("Error deleting product:", error);
+    throw error;
+  }
+};
+
+// About Section
+export type BackgroundType = "none" | "image" | "video";
+
+export interface AboutSection {
+  id?: string;
+  aboutUs: {
+    title: Record<Language, string>;
+    content: Record<Language, string>;
+    backgroundType: BackgroundType;
+    backgroundImage?: string;
+    backgroundVideo?: string;
+  };
+  mission: {
+    title: Record<Language, string>;
+    content: Record<Language, string>;
+    backgroundType: BackgroundType;
+    backgroundImage?: string;
+    backgroundVideo?: string;
+  };
+  vision: {
+    title: Record<Language, string>;
+    content: Record<Language, string>;
+    backgroundType: BackgroundType;
+    backgroundImage?: string;
+    backgroundVideo?: string;
+  };
+  updatedAt?: any;
+}
+
+export const getAboutSection = async (): Promise<AboutSection | null> => {
+  try {
+    const aboutDoc = await getDoc(doc(db, "homeContent", "about"));
+    if (aboutDoc.exists()) {
+      return { id: aboutDoc.id, ...aboutDoc.data() } as AboutSection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching about section:", error);
+    return null;
+  }
+};
+
+export const saveAboutSection = async (about: AboutSection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "about"),
+      {
+        ...about,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving about section:", error);
+    throw error;
+  }
+};
+
+export const uploadVideo = async (file: File): Promise<string> => {
+  try {
+    const timestamp = Date.now();
+    const fileName = `about/videos/${timestamp}-${file.name}`;
+    const storageRef = ref(storage, fileName);
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading video:", error);
+    throw error;
+  }
+};
+
+// Why Choose Section
+export interface WhyChoosePoint {
+  title: Record<Language, string>;
+  content: Record<Language, string>;
+}
+
+export interface WhyChooseSection {
+  id?: string;
+  title: Record<Language, string>;
+  points: WhyChoosePoint[];
+  updatedAt?: any;
+}
+
+export const getWhyChooseSection = async (): Promise<WhyChooseSection | null> => {
+  try {
+    const whyChooseDoc = await getDoc(doc(db, "homeContent", "whyChoose"));
+    if (whyChooseDoc.exists()) {
+      return { id: whyChooseDoc.id, ...whyChooseDoc.data() } as WhyChooseSection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching why choose section:", error);
+    return null;
+  }
+};
+
+export const saveWhyChooseSection = async (whyChoose: WhyChooseSection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "whyChoose"),
+      {
+        ...whyChoose,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving why choose section:", error);
+    throw error;
+  }
+};
+
+// Video Section
+export interface VideoSection {
+  id?: string;
+  title: Record<Language, string>;
+  subtitle: Record<Language, string>;
+  videoUrl: string;
+  updatedAt?: any;
+}
+
+export const getVideoSection = async (): Promise<VideoSection | null> => {
+  try {
+    const videoDoc = await getDoc(doc(db, "homeContent", "video"));
+    if (videoDoc.exists()) {
+      return { id: videoDoc.id, ...videoDoc.data() } as VideoSection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching video section:", error);
+    return null;
+  }
+};
+
+export const saveVideoSection = async (video: VideoSection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "video"),
+      {
+        ...video,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving video section:", error);
+    throw error;
+  }
+};
+
+// Trending Products Section
+export interface TrendingProductsSection {
+  id?: string;
+  title: Record<Language, string>;
+  subtitle: Record<Language, string>;
+  productIds: string[]; // Array of product IDs
+  updatedAt?: any;
+}
+
+export const getTrendingProductsSection = async (): Promise<TrendingProductsSection | null> => {
+  try {
+    const trendingDoc = await getDoc(doc(db, "homeContent", "trendingProducts"));
+    if (trendingDoc.exists()) {
+      return { id: trendingDoc.id, ...trendingDoc.data() } as TrendingProductsSection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching trending products section:", error);
+    return null;
+  }
+};
+
+export const saveTrendingProductsSection = async (trending: TrendingProductsSection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "trendingProducts"),
+      {
+        ...trending,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving trending products section:", error);
     throw error;
   }
 };
