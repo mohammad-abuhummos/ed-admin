@@ -385,3 +385,44 @@ export const saveTrendingProductsSection = async (trending: TrendingProductsSect
   }
 };
 
+// Events Section
+export interface Event {
+  id?: string;
+  title: Record<Language, string>;
+  imageUrl: string;
+}
+
+export interface EventsSection {
+  id?: string;
+  events: Event[];
+  updatedAt?: any;
+}
+
+export const getEventsSection = async (): Promise<EventsSection | null> => {
+  try {
+    const eventsDoc = await getDoc(doc(db, "homeContent", "events"));
+    if (eventsDoc.exists()) {
+      return { id: eventsDoc.id, ...eventsDoc.data() } as EventsSection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching events section:", error);
+    return null;
+  }
+};
+
+export const saveEventsSection = async (events: EventsSection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "events"),
+      {
+        ...events,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving events section:", error);
+    throw error;
+  }
+};
+
