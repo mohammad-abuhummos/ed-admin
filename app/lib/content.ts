@@ -426,3 +426,325 @@ export const saveEventsSection = async (events: EventsSection): Promise<void> =>
   }
 };
 
+// Gallery Section
+export interface GalleryImage {
+  id?: string;
+  imageUrl: string;
+  createdAt?: any;
+}
+
+export interface Album {
+  id?: string;
+  name: Record<Language, string>;
+  images: GalleryImage[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface Country {
+  id?: string;
+  name: Record<Language, string>;
+  albums: Album[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const getGallery = async (): Promise<Country[]> => {
+  try {
+    const countriesQuery = query(collection(db, "gallery"));
+    const querySnapshot = await getDocs(countriesQuery);
+    const countries: Country[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      countries.push({
+        id: doc.id,
+        ...data,
+        albums: data.albums || [],
+      } as Country);
+    });
+    // Sort by createdAt if available, otherwise by id
+    countries.sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        const aTime = a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      }
+      return 0;
+    });
+    return countries;
+  } catch (error) {
+    console.error("Error fetching gallery:", error);
+    return [];
+  }
+};
+
+export const saveCountry = async (country: Country): Promise<void> => {
+  try {
+    // Exclude id field when saving to Firestore
+    const { id, ...countryDataWithoutId } = country;
+
+    if (country.id) {
+      await setDoc(
+        doc(db, "gallery", country.id),
+        {
+          ...countryDataWithoutId,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    } else {
+      const newCountryRef = doc(collection(db, "gallery"));
+      await setDoc(newCountryRef, {
+        ...countryDataWithoutId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error("Error saving country:", error);
+    throw error;
+  }
+};
+
+export const deleteCountry = async (countryId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, "gallery", countryId));
+  } catch (error) {
+    console.error("Error deleting country:", error);
+    throw error;
+  }
+};
+
+export const saveAlbum = async (countryId: string, album: Album): Promise<void> => {
+  try {
+    if (!countryId) {
+      throw new Error("Country ID is required");
+    }
+
+    const countryRef = doc(db, "gallery", countryId);
+    const countryDoc = await getDoc(countryRef);
+
+    if (!countryDoc.exists()) {
+      throw new Error("Country not found");
+    }
+
+    const countryData = countryDoc.data() as Country;
+    const albums = countryData.albums || [];
+
+    // Ensure album has required fields
+    const albumToSave: Album = {
+      name: album.name || { en: "", ar: "" },
+      images: album.images || [],
+    };
+
+    if (album.id) {
+      // Update existing album
+      const index = albums.findIndex((a) => a.id === album.id);
+      if (index > -1) {
+        albums[index] = {
+          ...albumToSave,
+          id: album.id,
+          createdAt: albums[index].createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      } else {
+        throw new Error("Album not found for update");
+      }
+    } else {
+      // Add new album
+      const newAlbumId = Date.now().toString();
+      albums.push({
+        ...albumToSave,
+        id: newAlbumId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    // Exclude id field when saving to Firestore
+    const { id, ...countryDataWithoutId } = countryData;
+    await setDoc(countryRef, {
+      ...countryDataWithoutId,
+      albums,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error saving album:", error);
+    throw error;
+  }
+};
+
+export const deleteAlbum = async (countryId: string, albumId: string): Promise<void> => {
+  try {
+    const countryRef = doc(db, "gallery", countryId);
+    const countryDoc = await getDoc(countryRef);
+
+    if (!countryDoc.exists()) {
+      throw new Error("Country not found");
+    }
+
+    const countryData = countryDoc.data() as Country;
+    const albums = (countryData.albums || []).filter((a) => a.id !== albumId);
+
+    // Exclude id field when saving to Firestore
+    const { id, ...countryDataWithoutId } = countryData;
+    await setDoc(countryRef, {
+      ...countryDataWithoutId,
+      albums,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error deleting album:", error);
+    throw error;
+  }
+};
+
+export const addImageToAlbum = async (countryId: string, albumId: string, imageUrl: string): Promise<void> => {
+  try {
+    const countryRef = doc(db, "gallery", countryId);
+    const countryDoc = await getDoc(countryRef);
+
+    if (!countryDoc.exists()) {
+      throw new Error("Country not found");
+    }
+
+    const countryData = countryDoc.data() as Country;
+    const albums = countryData.albums || [];
+    const albumIndex = albums.findIndex((a) => a.id === albumId);
+
+    if (albumIndex === -1) {
+      throw new Error("Album not found");
+    }
+
+    const album = albums[albumIndex];
+    const images = album.images || [];
+    images.push({
+      imageUrl,
+      createdAt: new Date().toISOString(),
+    });
+
+    albums[albumIndex] = {
+      ...album,
+      images,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Exclude id field when saving to Firestore
+    const { id, ...countryDataWithoutId } = countryData;
+    await setDoc(countryRef, {
+      ...countryDataWithoutId,
+      albums,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error adding image to album:", error);
+    throw error;
+  }
+};
+
+// Home Content Gallery Section
+export interface HomeGalleryImage {
+  id?: string;
+  imageUrl: string;
+  title: Record<Language, string>;
+}
+
+export interface HomeGallerySection {
+  id?: string;
+  title: Record<Language, string>;
+  subtitle: Record<Language, string>;
+  selectedAlbumIds: string[]; // Array of album IDs from gallery (format: "countryId:albumId")
+  images: HomeGalleryImage[]; // Direct images added to this section
+  updatedAt?: any;
+}
+
+export const getHomeGallerySection = async (): Promise<HomeGallerySection | null> => {
+  try {
+    const galleryDoc = await getDoc(doc(db, "homeContent", "gallery"));
+    if (galleryDoc.exists()) {
+      return { id: galleryDoc.id, ...galleryDoc.data() } as HomeGallerySection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching home gallery section:", error);
+    return null;
+  }
+};
+
+export const saveHomeGallerySection = async (gallery: HomeGallerySection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "gallery"),
+      {
+        ...gallery,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving home gallery section:", error);
+    throw error;
+  }
+};
+
+export const deleteImageFromAlbum = async (countryId: string, albumId: string, imageIndex: number): Promise<void> => {
+  try {
+    const countryRef = doc(db, "gallery", countryId);
+    const countryDoc = await getDoc(countryRef);
+
+    if (!countryDoc.exists()) {
+      throw new Error("Country not found");
+    }
+
+    const countryData = countryDoc.data() as Country;
+    const albums = countryData.albums || [];
+    const albumIndex = albums.findIndex((a) => a.id === albumId);
+
+    if (albumIndex === -1) {
+      throw new Error("Album not found");
+    }
+
+    const album = albums[albumIndex];
+    const images = album.images || [];
+
+    // Delete image from storage if needed
+    if (images[imageIndex]?.imageUrl) {
+      try {
+        // Extract path from Firebase Storage URL
+        // URL format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media
+        const imageUrl = images[imageIndex].imageUrl;
+        if (imageUrl && imageUrl.startsWith("https://")) {
+          const urlParts = imageUrl.split("/o/");
+          if (urlParts.length > 1) {
+            const pathPart = urlParts[1].split("?")[0];
+            const decodedPath = decodeURIComponent(pathPart);
+            const imageRef = ref(storage, decodedPath);
+            await deleteObject(imageRef);
+          }
+        }
+      } catch (error) {
+        console.warn("Error deleting image from storage:", error);
+        // Continue with deletion even if storage deletion fails
+      }
+    }
+
+    images.splice(imageIndex, 1);
+
+    albums[albumIndex] = {
+      ...album,
+      images,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Exclude id field when saving to Firestore
+    const { id, ...countryDataWithoutId } = countryData;
+    await setDoc(countryRef, {
+      ...countryDataWithoutId,
+      albums,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error deleting image from album:", error);
+    throw error;
+  }
+};
+
+

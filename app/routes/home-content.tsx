@@ -20,6 +20,9 @@ import {
   saveTrendingProductsSection,
   getEventsSection,
   saveEventsSection,
+  getHomeGallerySection,
+  saveHomeGallerySection,
+  getGallery,
   getProducts,
   type HeroSlide,
   type AboutSection,
@@ -29,6 +32,10 @@ import {
   type TrendingProductsSection,
   type EventsSection,
   type Event,
+  type HomeGallerySection,
+  type HomeGalleryImage,
+  type Country,
+  type Album,
   type Product,
   type Language,
   type BackgroundType,
@@ -45,14 +52,16 @@ export function meta({ }: Route.MetaArgs) {
 function HomeContentPage() {
   const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"hero" | "video" | "about" | "whyChoose" | "trendingProducts" | "events">("hero");
+  const [activeTab, setActiveTab] = useState<"hero" | "video" | "about" | "whyChoose" | "trendingProducts" | "events" | "gallery">("hero");
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [aboutSection, setAboutSection] = useState<AboutSection | null>(null);
   const [whyChooseSection, setWhyChooseSection] = useState<WhyChooseSection | null>(null);
   const [videoSection, setVideoSection] = useState<VideoSection | null>(null);
   const [trendingProductsSection, setTrendingProductsSection] = useState<TrendingProductsSection | null>(null);
   const [eventsSection, setEventsSection] = useState<EventsSection | null>(null);
+  const [homeGallerySection, setHomeGallerySection] = useState<HomeGallerySection | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allGalleryCountries, setAllGalleryCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingSlide, setEditingSlide] = useState<HeroSlide | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,6 +72,7 @@ function HomeContentPage() {
   const [savingVideo, setSavingVideo] = useState(false);
   const [savingTrendingProducts, setSavingTrendingProducts] = useState(false);
   const [savingEvents, setSavingEvents] = useState(false);
+  const [savingHomeGallery, setSavingHomeGallery] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -70,14 +80,16 @@ function HomeContentPage() {
 
   const fetchData = async () => {
     try {
-      const [slidesData, aboutData, whyChooseData, videoData, trendingData, eventsData, productsData] = await Promise.all([
+      const [slidesData, aboutData, whyChooseData, videoData, trendingData, eventsData, homeGalleryData, productsData, galleryData] = await Promise.all([
         getHeroSlides(),
         getAboutSection(),
         getWhyChooseSection(),
         getVideoSection(),
         getTrendingProductsSection(),
         getEventsSection(),
+        getHomeGallerySection(),
         getProducts(),
+        getGallery(),
       ]);
       setSlides(slidesData);
       if (aboutData) {
@@ -252,6 +264,24 @@ function HomeContentPage() {
         // Initialize with empty content
         setEventsSection({
           events: [],
+        });
+      }
+      setAllGalleryCountries(galleryData);
+      if (homeGalleryData) {
+        setHomeGallerySection(homeGalleryData);
+      } else {
+        // Initialize with empty content
+        setHomeGallerySection({
+          title: {
+            en: "",
+            ar: "",
+          },
+          subtitle: {
+            en: "",
+            ar: "",
+          },
+          selectedAlbumIds: [],
+          images: [],
         });
       }
     } catch (error) {
@@ -571,6 +601,79 @@ function HomeContentPage() {
     setEventsSection(newSection);
   };
 
+  const handleSaveHomeGallery = async () => {
+    if (!homeGallerySection) return;
+
+    setSavingHomeGallery(true);
+    try {
+      await saveHomeGallerySection(homeGallerySection);
+      alert("Gallery section saved successfully!");
+    } catch (error) {
+      console.error("Error saving gallery section:", error);
+      alert("Failed to save gallery section");
+    } finally {
+      setSavingHomeGallery(false);
+    }
+  };
+
+  const updateHomeGalleryField = (field: "title" | "subtitle", lang: Language, value: string) => {
+    if (!homeGallerySection) return;
+    const newSection = { ...homeGallerySection };
+    newSection[field][lang] = value;
+    setHomeGallerySection(newSection);
+  };
+
+  const toggleAlbumSelection = (countryId: string, albumId: string) => {
+    if (!homeGallerySection) return;
+    const newSection = { ...homeGallerySection };
+    const albumKey = `${countryId}:${albumId}`;
+    const index = newSection.selectedAlbumIds.indexOf(albumKey);
+    if (index > -1) {
+      newSection.selectedAlbumIds.splice(index, 1);
+    } else {
+      newSection.selectedAlbumIds.push(albumKey);
+    }
+    setHomeGallerySection(newSection);
+  };
+
+  const handleHomeGalleryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !homeGallerySection) return;
+
+    setUploading(true);
+    try {
+      const imageUrl = await uploadImage(file, "home-gallery");
+      const newSection = { ...homeGallerySection };
+      newSection.images.push({
+        imageUrl,
+        title: { en: "", ar: "" },
+      });
+      setHomeGallerySection(newSection);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const updateHomeGalleryImageTitle = (index: number, lang: Language, value: string) => {
+    if (!homeGallerySection) return;
+    const newSection = { ...homeGallerySection };
+    if (!newSection.images[index].title) {
+      newSection.images[index].title = { en: "", ar: "" };
+    }
+    newSection.images[index].title[lang] = value;
+    setHomeGallerySection(newSection);
+  };
+
+  const removeHomeGalleryImage = (index: number) => {
+    if (!homeGallerySection) return;
+    const newSection = { ...homeGallerySection };
+    newSection.images.splice(index, 1);
+    setHomeGallerySection(newSection);
+  };
+
   const updateField = (
     field: string,
     lang: Language,
@@ -672,6 +775,15 @@ function HomeContentPage() {
                   }`}
               >
                 Events
+              </button>
+              <button
+                onClick={() => setActiveTab("gallery")}
+                className={`px-4 py-2 font-medium transition-colors ${activeTab === "gallery"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
+              >
+                Gallery
               </button>
             </div>
           </div>
@@ -1591,6 +1703,178 @@ function HomeContentPage() {
                   className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingEvents ? "Saving..." : "Save Events Section"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Gallery Section Tab */}
+          {activeTab === "gallery" && homeGallerySection && (
+            <div className="max-w-4xl mx-auto space-y-6">
+              {/* Language Tabs */}
+              <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6">
+                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                  <button
+                    onClick={() => setCurrentLang("en")}
+                    className={`px-4 py-2 font-medium transition-colors ${currentLang === "en"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => setCurrentLang("ar")}
+                    className={`px-4 py-2 font-medium transition-colors ${currentLang === "ar"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    العربية (Arabic)
+                  </button>
+                </div>
+
+                {/* Title */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Title ({currentLang === "en" ? "English" : "Arabic"})
+                  </label>
+                  <input
+                    type="text"
+                    value={homeGallerySection.title[currentLang] || ""}
+                    onChange={(e) => updateHomeGalleryField("title", currentLang, e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Subtitle */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subtitle ({currentLang === "en" ? "English" : "Arabic"})
+                  </label>
+                  <textarea
+                    value={homeGallerySection.subtitle[currentLang] || ""}
+                    onChange={(e) => updateHomeGalleryField("subtitle", currentLang, e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Select Albums from Gallery */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Select Albums from Gallery ({homeGallerySection.selectedAlbumIds.length} selected)
+                  </label>
+                  {allGalleryCountries.length === 0 ? (
+                    <p className="text-sm text-gray-500">No albums available. Please add albums in the Gallery page first.</p>
+                  ) : (
+                    <div className="border border-gray-300 rounded-lg max-h-96 overflow-y-auto">
+                      {allGalleryCountries.map((country) => (
+                        <div key={country.id} className="border-b border-gray-200 last:border-b-0">
+                          <div className="p-3 bg-gray-50 font-medium text-gray-900">
+                            {country.name[currentLang] || country.name.en || country.name.ar || "Unnamed Country"}
+                          </div>
+                          {country.albums && country.albums.length > 0 ? (
+                            <div className="p-2 space-y-2">
+                              {country.albums.map((album) => {
+                                const albumKey = `${country.id}:${album.id}`;
+                                const isSelected = homeGallerySection.selectedAlbumIds.includes(albumKey);
+                                return (
+                                  <label
+                                    key={album.id}
+                                    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-blue-50 ${isSelected ? "bg-blue-50" : ""
+                                      }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => country.id && album.id && toggleAlbumSelection(country.id, album.id)}
+                                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    />
+                                    <span className="text-sm text-gray-900">
+                                      {album.name[currentLang] || album.name.en || album.name.ar || "Unnamed Album"}
+                                    </span>
+                                    <span className="text-xs text-gray-500 ml-auto">
+                                      ({album.images?.length || 0} images)
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="p-2 text-sm text-gray-500">No albums in this country</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Direct Images */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Add Direct Images
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleHomeGalleryImageUpload}
+                    disabled={uploading}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+                  />
+                  {uploading && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
+                </div>
+
+                {/* Direct Images List */}
+                <div className="space-y-4">
+                  {homeGallerySection.images.map((image, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="text-sm font-semibold text-gray-900">Image {index + 1}</h3>
+                        <button
+                          onClick={() => removeHomeGalleryImage(index)}
+                          className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="mb-3">
+                        <img
+                          src={image.imageUrl}
+                          alt={`Gallery ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Image Title ({currentLang === "en" ? "English" : "Arabic"})
+                        </label>
+                        <input
+                          type="text"
+                          value={image.title?.[currentLang] || ""}
+                          onChange={(e) => updateHomeGalleryImageTitle(index, currentLang, e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  {homeGallerySection.images.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No direct images added yet. Upload images or select albums above.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveHomeGallery}
+                  disabled={savingHomeGallery}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingHomeGallery ? "Saving..." : "Save Gallery Section"}
                 </button>
               </div>
             </div>

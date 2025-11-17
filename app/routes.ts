@@ -8,4 +8,5 @@ export default [
   route("users", "routes/users.tsx"),
   route("home-content", "routes/home-content.tsx"),
   route("products", "routes/products.tsx"),
+  route("gallery", "routes/gallery.tsx"),
 ] satisfies RouteConfig;
