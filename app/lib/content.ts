@@ -199,6 +199,107 @@ export const deleteProduct = async (productId: string): Promise<void> => {
   }
 };
 
+// Seed products function
+export const seedProducts = async (): Promise<void> => {
+  const imageUrl = "https://firebasestorage.googleapis.com/v0/b/emiratesd-29ff7.firebasestorage.app/o/products%2F1763300395206-1.png?alt=media&token=dd38f7dc-08bb-441d-a0ac-d5b6238bcff3";
+
+  const productsData = [
+    {
+      name: { en: "Ajwa Dates", ar: "تمر عجوة" },
+      description: { en: "Premium Ajwa dates from Medina, Grade 1, 2 & 3", ar: "تمر عجوة ممتاز من المدينة المنورة، درجات 1 و 2 و 3" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "0.5, 1, 2, 3, 5, 10 kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Medjool Dates", ar: "تمر المجهول" },
+      description: { en: "Premium Medjool from Palestine, Saudi Arabia & Jordan", ar: "مجهول ممتاز من فلسطين والمملكة العربية السعودية والأردن" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "Small, Medium, Large, Jumbo, Super Jumbo",
+      grade: "Palestine, Saudi Arabia, Jordan",
+    },
+    {
+      name: { en: "Khalas Dates", ar: "تمر خلاص" },
+      description: { en: "Authentic Khalas dates, Grade 1, 2 & 3", ar: "تمر خلاص أصيل، درجات 1 و 2 و 3" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5, 10 kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Sukkary Dates", ar: "تمر سكري" },
+      description: { en: "Sweet Sukkary dates, Grade 1, 2 & 3", ar: "تمر سكري حلو، درجات 1 و 2 و 3" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5, 10 kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Zahidi Dates", ar: "تمر زاهدي" },
+      description: { en: "Classic Zahidi dates, Grade 1, 2 & 3", ar: "تمر زاهدي كلاسيكي، درجات 1 و 2 و 3" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5, 10 kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Khodri Dates", ar: "تمر خضري" },
+      description: { en: "Premium Khodri variety, Grade 1, 2 & 3", ar: "صنف خضري ممتاز، درجات 1 و 2 و 3" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5, 10 kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Sagai Dates", ar: "تمر سقاي" },
+      description: { en: "Sagai dates with Grade options & Gift Pack", ar: "تمر سقاي مع خيارات الدرجات وعلبة هدايا" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5, 10 kg",
+      grade: "Grade 1, Grade 2, Grade 3, Gift Pack",
+    },
+    {
+      name: { en: "Mabroom Dates", ar: "تمر مبروم" },
+      description: { en: "Chewy Mabroom dates, Grade 1, 2 & 3", ar: "تمر مبروم مطاطي، درجات 1 و 2 و 3" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5, 10 kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Barhi (Berni) Dates", ar: "تمر برحي" },
+      description: { en: "Fresh Barhi dates, premium quality", ar: "تمر برحي طازج، جودة ممتازة" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5, 10 kg",
+    },
+    {
+      name: { en: "Mix & Stuffed Dates", ar: "تمر محشو ومختلط" },
+      description: { en: "Variety of stuffed and mixed date products", ar: "مجموعة متنوعة من منتجات التمر المحشو والمختلط" },
+      mainImage: imageUrl,
+      images: [imageUrl],
+      packageSize: "1, 2, 3, 5 kg",
+      grade: "Almonds Stuffed, Pistachios Stuffed, Cashew Stuffed, Chocolate Coated, Honey & Cardamom",
+    },
+  ];
+
+  try {
+    for (const product of productsData) {
+      await setDoc(doc(collection(db, "products")), {
+        ...product,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+    console.log(`Successfully seeded ${productsData.length} products`);
+  } catch (error) {
+    console.error("Error seeding products:", error);
+    throw error;
+  }
+};
+
 // About Section
 export type BackgroundType = "none" | "image" | "video";
 
