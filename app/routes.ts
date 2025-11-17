@@ -7,4 +7,5 @@ export default [
   route("dashboard", "routes/dashboard.tsx"),
   route("users", "routes/users.tsx"),
   route("home-content", "routes/home-content.tsx"),
+  route("products", "routes/products.tsx"),
 ] satisfies RouteConfig;

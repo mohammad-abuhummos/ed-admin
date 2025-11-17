@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, deleteDoc } from "firebase/firestore";
+import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "./firebase";
 
@@ -89,16 +89,112 @@ export const deleteHeroSlide = async (slideId: string): Promise<void> => {
   }
 };
 
-export const uploadImage = async (file: File): Promise<string> => {
+export const uploadImage = async (file: File, folder: string = "hero-slides"): Promise<string> => {
   try {
     const timestamp = Date.now();
-    const fileName = `hero-slides/${timestamp}-${file.name}`;
+    const fileName = `${folder}/${timestamp}-${file.name}`;
     const storageRef = ref(storage, fileName);
     await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(storageRef);
     return downloadURL;
   } catch (error) {
     console.error("Error uploading image:", error);
+    throw error;
+  }
+};
+
+// Products
+export interface Product {
+  id?: string;
+  name: Record<Language, string>;
+  description: Record<Language, string>;
+  mainImage: string;
+  images: string[];
+  packageSize?: string;
+  grade?: string;
+  price?: number;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const getProducts = async (): Promise<Product[]> => {
+  try {
+    const productsQuery = query(collection(db, "products"));
+    const querySnapshot = await getDocs(productsQuery);
+    const products: Product[] = [];
+    querySnapshot.forEach((doc) => {
+      products.push({ id: doc.id, ...doc.data() } as Product);
+    });
+    // Sort by createdAt if available, otherwise by id
+    products.sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        const aTime = a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      }
+      return 0;
+    });
+    return products;
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
+};
+
+export const saveProduct = async (product: Product): Promise<void> => {
+  try {
+    if (product.id) {
+      // Update existing product
+      await setDoc(
+        doc(db, "products", product.id),
+        {
+          ...product,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    } else {
+      // Create new product
+      await setDoc(doc(collection(db, "products")), {
+        ...product,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error("Error saving product:", error);
+    throw error;
+  }
+};
+
+export const deleteProduct = async (productId: string): Promise<void> => {
+  try {
+    const productDoc = await getDoc(doc(db, "products", productId));
+    if (productDoc.exists()) {
+      const productData = productDoc.data() as Product;
+      
+      // Delete images from storage
+      const imagesToDelete = [
+        productData.mainImage,
+        ...(productData.images || []),
+      ].filter(Boolean);
+
+      for (const imageUrl of imagesToDelete) {
+        try {
+          if (imageUrl && imageUrl.startsWith("https://")) {
+            const urlParts = imageUrl.split("/");
+            const fileName = urlParts[urlParts.length - 1].split("?")[0];
+            const imageRef = ref(storage, `products/${fileName}`);
+            await deleteObject(imageRef);
+          }
+        } catch (storageError) {
+          console.warn("Error deleting image from storage:", storageError);
+        }
+      }
+
+      await deleteDoc(doc(db, "products", productId));
+    }
+  } catch (error) {
+    console.error("Error deleting product:", error);
     throw error;
   }
 };
