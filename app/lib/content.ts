@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, setDoc, getDocs, query, orderBy, deleteDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "./firebase";
 
@@ -928,6 +928,65 @@ export const deleteGiftProduct = async (giftProductId: string): Promise<void> =>
     }
   } catch (error) {
     console.error("Error deleting gift product:", error);
+    throw error;
+  }
+};
+
+// Contact Messages
+export interface ContactMessage {
+  id?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  seen: boolean;
+  resolved: boolean;
+  createdAt?: any;
+}
+
+export const getContactMessages = async (): Promise<ContactMessage[]> => {
+  try {
+    const messagesQuery = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(messagesQuery);
+    const messages: ContactMessage[] = [];
+    querySnapshot.forEach((doc) => {
+      messages.push({ id: doc.id, ...doc.data() } as ContactMessage);
+    });
+    return messages;
+  } catch (error) {
+    console.error("Error fetching contact messages:", error);
+    return [];
+  }
+};
+
+export const markMessageAsSeen = async (messageId: string): Promise<void> => {
+  try {
+    await updateDoc(doc(db, "messages", messageId), {
+      seen: true,
+    });
+  } catch (error) {
+    console.error("Error marking message as seen:", error);
+    throw error;
+  }
+};
+
+export const markMessageAsResolved = async (messageId: string, resolved: boolean): Promise<void> => {
+  try {
+    await updateDoc(doc(db, "messages", messageId), {
+      resolved: resolved,
+    });
+  } catch (error) {
+    console.error("Error updating message resolved status:", error);
+    throw error;
+  }
+};
+
+export const deleteContactMessage = async (messageId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, "messages", messageId));
+  } catch (error) {
+    console.error("Error deleting contact message:", error);
     throw error;
   }
 };
