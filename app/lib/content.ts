@@ -991,4 +991,59 @@ export const deleteContactMessage = async (messageId: string): Promise<void> => 
   }
 };
 
+// Orders
+export interface OrderItem {
+  productName?: string;
+  name?: string; // Alternative field name
+  product?: string; // Alternative field name
+  grade?: string;
+  packageSize?: string;
+  quantity: number;
+}
+
+export interface Order {
+  id?: string;
+  status: "new" | "processing" | "completed";
+  createdAt?: any;
+  companyName?: string;
+  contactName: string;
+  contactPhone: string;
+  items: OrderItem[];
+}
+
+export const getOrders = async (): Promise<Order[]> => {
+  try {
+    const ordersQuery = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(ordersQuery);
+    const orders: Order[] = [];
+    querySnapshot.forEach((doc) => {
+      orders.push({ id: doc.id, ...doc.data() } as Order);
+    });
+    return orders;
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return [];
+  }
+};
+
+export const updateOrderStatus = async (orderId: string, status: "new" | "processing" | "completed"): Promise<void> => {
+  try {
+    await updateDoc(doc(db, "orders", orderId), {
+      status,
+    });
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    throw error;
+  }
+};
+
+export const deleteOrder = async (orderId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, "orders", orderId));
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    throw error;
+  }
+};
+
 
