@@ -360,10 +360,10 @@ function HomeContentPage() {
     const newSection = { ...aboutSection };
     newSection[section].backgroundType = type;
     if (type !== "image") {
-      newSection[section].backgroundImage = undefined;
+      delete newSection[section].backgroundImage;
     }
     if (type !== "video") {
-      newSection[section].backgroundVideo = undefined;
+      delete newSection[section].backgroundVideo;
     }
     setAboutSection(newSection);
   };
@@ -404,12 +404,33 @@ function HomeContentPage() {
     }
   };
 
+  const removeUndefinedValues = (obj: any): any => {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(removeUndefinedValues);
+    }
+    if (typeof obj === "object") {
+      const cleaned: any = {};
+      for (const key in obj) {
+        if (obj[key] !== undefined) {
+          cleaned[key] = removeUndefinedValues(obj[key]);
+        }
+      }
+      return cleaned;
+    }
+    return obj;
+  };
+
   const handleSaveAbout = async () => {
     if (!aboutSection) return;
 
     setSavingAbout(true);
     try {
-      await saveAboutSection(aboutSection);
+      // Remove undefined values before saving to Firebase
+      const cleanedSection = removeUndefinedValues(aboutSection);
+      await saveAboutSection(cleanedSection);
       alert("About section saved successfully!");
     } catch (error) {
       console.error("Error saving about section:", error);
