@@ -848,4 +848,88 @@ export const deleteImageFromAlbum = async (countryId: string, albumId: string, i
   }
 };
 
+// Gift Products
+export interface GiftProduct {
+  id?: string;
+  name: Record<Language, string>;
+  image: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const getGiftProducts = async (): Promise<GiftProduct[]> => {
+  try {
+    const giftProductsQuery = query(collection(db, "giftProducts"));
+    const querySnapshot = await getDocs(giftProductsQuery);
+    const giftProducts: GiftProduct[] = [];
+    querySnapshot.forEach((doc) => {
+      giftProducts.push({ id: doc.id, ...doc.data() } as GiftProduct);
+    });
+    // Sort by createdAt if available, otherwise by id
+    giftProducts.sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        const aTime = a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime;
+      }
+      return 0;
+    });
+    return giftProducts;
+  } catch (error) {
+    console.error("Error fetching gift products:", error);
+    return [];
+  }
+};
+
+export const saveGiftProduct = async (giftProduct: GiftProduct): Promise<void> => {
+  try {
+    if (giftProduct.id) {
+      // Update existing gift product
+      await setDoc(
+        doc(db, "giftProducts", giftProduct.id),
+        {
+          ...giftProduct,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    } else {
+      // Create new gift product
+      await setDoc(doc(collection(db, "giftProducts")), {
+        ...giftProduct,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error("Error saving gift product:", error);
+    throw error;
+  }
+};
+
+export const deleteGiftProduct = async (giftProductId: string): Promise<void> => {
+  try {
+    const giftProductDoc = await getDoc(doc(db, "giftProducts", giftProductId));
+    if (giftProductDoc.exists()) {
+      const giftProductData = giftProductDoc.data() as GiftProduct;
+
+      // Delete image from storage
+      if (giftProductData.image && giftProductData.image.startsWith("https://")) {
+        try {
+          const urlParts = giftProductData.image.split("/");
+          const fileName = urlParts[urlParts.length - 1].split("?")[0];
+          const imageRef = ref(storage, `gift-products/${fileName}`);
+          await deleteObject(imageRef);
+        } catch (storageError) {
+          console.warn("Error deleting image from storage:", storageError);
+        }
+      }
+
+      await deleteDoc(doc(db, "giftProducts", giftProductId));
+    }
+  } catch (error) {
+    console.error("Error deleting gift product:", error);
+    throw error;
+  }
+};
+
 
