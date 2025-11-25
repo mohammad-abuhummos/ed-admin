@@ -4,6 +4,22 @@ import { db, storage } from "./firebase";
 
 export type Language = "en" | "ar";
 
+const deleteStorageFileByUrl = async (fileUrl?: string) => {
+  if (!fileUrl || typeof fileUrl !== "string" || !fileUrl.startsWith("http")) {
+    return;
+  }
+
+  try {
+    const [, pathPart] = fileUrl.split("/o/");
+    if (!pathPart) return;
+    const cleanPath = decodeURIComponent(pathPart.split("?")[0]);
+    const fileRef = ref(storage, cleanPath);
+    await deleteObject(fileRef);
+  } catch (error) {
+    console.warn("Error deleting file from storage:", error);
+  }
+};
+
 export interface HeroSlide {
   id?: string;
   image: string;
@@ -928,6 +944,92 @@ export const deleteGiftProduct = async (giftProductId: string): Promise<void> =>
     }
   } catch (error) {
     console.error("Error deleting gift product:", error);
+    throw error;
+  }
+};
+
+// News Management
+export interface NewsArticle {
+  id?: string;
+  title: string;
+  description: string;
+  contentHtml: string;
+  coverImage: string;
+  gallery: string[];
+  publishDate?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const getNews = async (): Promise<NewsArticle[]> => {
+  try {
+    const newsQuery = query(collection(db, "news"), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(newsQuery);
+    const news: NewsArticle[] = [];
+    querySnapshot.forEach((doc) => {
+      news.push({ id: doc.id, ...doc.data() } as NewsArticle);
+    });
+    return news;
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    return [];
+  }
+};
+
+export const saveNews = async (news: NewsArticle): Promise<void> => {
+  try {
+    const baseData = {
+      title: news.title,
+      description: news.description,
+      contentHtml: news.contentHtml,
+      coverImage: news.coverImage,
+      gallery: news.gallery || [],
+      publishDate: news.publishDate || null,
+    };
+
+    if (news.id) {
+      await setDoc(
+        doc(db, "news", news.id),
+        {
+          ...baseData,
+          createdAt: news.createdAt || serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else {
+      const newsRef = doc(collection(db, "news"));
+      await setDoc(newsRef, {
+        ...baseData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error("Error saving news:", error);
+    throw error;
+  }
+};
+
+export const deleteNews = async (newsId: string): Promise<void> => {
+  try {
+    const newsDoc = await getDoc(doc(db, "news", newsId));
+    if (newsDoc.exists()) {
+      const newsData = newsDoc.data() as NewsArticle;
+      const imagesToDelete = [newsData.coverImage, ...(newsData.gallery || [])].filter(Boolean);
+
+      for (const imageUrl of imagesToDelete) {
+        try {
+          await deleteStorageFileByUrl(imageUrl);
+        } catch (storageError) {
+          console.warn("Error deleting news image from storage:", storageError);
+        }
+      }
+    }
+
+    await deleteDoc(doc(db, "news", newsId));
+  } catch (error) {
+    console.error("Error deleting news:", error);
     throw error;
   }
 };
