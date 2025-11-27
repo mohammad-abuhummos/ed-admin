@@ -802,6 +802,106 @@ export const saveHomeGallerySection = async (gallery: HomeGallerySection): Promi
   }
 };
 
+export interface ZeroFeeCountry {
+  id?: string;
+  countryCode: string;
+  name: Record<Language, string>;
+  note?: Record<Language, string>;
+}
+
+export interface ZeroFeesShippingSection {
+  id?: string;
+  title: Record<Language, string>;
+  subtitle: Record<Language, string>;
+  description: Record<Language, string>;
+  countries: ZeroFeeCountry[];
+  updatedAt?: any;
+}
+
+export const getZeroFeesShippingSection = async (): Promise<ZeroFeesShippingSection | null> => {
+  try {
+    const sectionDoc = await getDoc(doc(db, "homeContent", "zeroFeesShipping"));
+    if (sectionDoc.exists()) {
+      return { id: sectionDoc.id, ...sectionDoc.data() } as ZeroFeesShippingSection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching zero fees shipping section:", error);
+    return null;
+  }
+};
+
+export const saveZeroFeesShippingSection = async (section: ZeroFeesShippingSection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "zeroFeesShipping"),
+      {
+        ...section,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving zero fees shipping section:", error);
+    throw error;
+  }
+};
+
+// Website Settings
+export interface ContactEntry {
+  id?: string;
+  label: string;
+  value: string;
+}
+
+export interface LocationEntry {
+  id?: string;
+  title: string;
+  address: string;
+  mapLink?: string;
+}
+
+export interface WebsiteSettings {
+  id?: string;
+  socialLinks: {
+    facebook?: string;
+    instagram?: string;
+    whatsapp?: string;
+    google?: string;
+  };
+  phones: ContactEntry[];
+  emails: ContactEntry[];
+  locations: LocationEntry[];
+  updatedAt?: any;
+}
+
+export const getWebsiteSettings = async (): Promise<WebsiteSettings | null> => {
+  try {
+    const settingsDoc = await getDoc(doc(db, "settings", "website"));
+    if (settingsDoc.exists()) {
+      return { id: settingsDoc.id, ...settingsDoc.data() } as WebsiteSettings;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching website settings:", error);
+    return null;
+  }
+};
+
+export const saveWebsiteSettings = async (settings: WebsiteSettings): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "settings", "website"),
+      {
+        ...settings,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving website settings:", error);
+    throw error;
+  }
+};
+
 export const deleteImageFromAlbum = async (countryId: string, albumId: string, imageIndex: number): Promise<void> => {
   try {
     const countryRef = doc(db, "gallery", countryId);

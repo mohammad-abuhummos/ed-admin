@@ -22,6 +22,8 @@ import {
   saveEventsSection,
   getHomeGallerySection,
   saveHomeGallerySection,
+  getZeroFeesShippingSection,
+  saveZeroFeesShippingSection,
   getGallery,
   getProducts,
   type HeroSlide,
@@ -34,12 +36,15 @@ import {
   type Event,
   type HomeGallerySection,
   type HomeGalleryImage,
+  type ZeroFeesShippingSection,
+  type ZeroFeeCountry,
   type Country,
   type Album,
   type Product,
   type Language,
   type BackgroundType,
 } from "~/lib/content";
+import { findFlagUrlByIso2Code } from "country-flags-svg";
 import type { Route } from "./+types/home-content";
 
 export function meta({ }: Route.MetaArgs) {
@@ -52,7 +57,7 @@ export function meta({ }: Route.MetaArgs) {
 function HomeContentPage() {
   const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"hero" | "video" | "about" | "whyChoose" | "trendingProducts" | "events" | "gallery">("hero");
+  const [activeTab, setActiveTab] = useState<"hero" | "video" | "about" | "whyChoose" | "trendingProducts" | "events" | "gallery" | "zeroFees">("hero");
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [aboutSection, setAboutSection] = useState<AboutSection | null>(null);
   const [whyChooseSection, setWhyChooseSection] = useState<WhyChooseSection | null>(null);
@@ -60,6 +65,7 @@ function HomeContentPage() {
   const [trendingProductsSection, setTrendingProductsSection] = useState<TrendingProductsSection | null>(null);
   const [eventsSection, setEventsSection] = useState<EventsSection | null>(null);
   const [homeGallerySection, setHomeGallerySection] = useState<HomeGallerySection | null>(null);
+  const [zeroFeesSection, setZeroFeesSection] = useState<ZeroFeesShippingSection | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [allGalleryCountries, setAllGalleryCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +79,8 @@ function HomeContentPage() {
   const [savingTrendingProducts, setSavingTrendingProducts] = useState(false);
   const [savingEvents, setSavingEvents] = useState(false);
   const [savingHomeGallery, setSavingHomeGallery] = useState(false);
+  const generateCountryId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const [savingZeroFees, setSavingZeroFees] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -80,7 +88,18 @@ function HomeContentPage() {
 
   const fetchData = async () => {
     try {
-      const [slidesData, aboutData, whyChooseData, videoData, trendingData, eventsData, homeGalleryData, productsData, galleryData] = await Promise.all([
+      const [
+        slidesData,
+        aboutData,
+        whyChooseData,
+        videoData,
+        trendingData,
+        eventsData,
+        homeGalleryData,
+        zeroFeesData,
+        productsData,
+        galleryData,
+      ] = await Promise.all([
         getHeroSlides(),
         getAboutSection(),
         getWhyChooseSection(),
@@ -88,6 +107,7 @@ function HomeContentPage() {
         getTrendingProductsSection(),
         getEventsSection(),
         getHomeGallerySection(),
+        getZeroFeesShippingSection(),
         getProducts(),
         getGallery(),
       ]);
@@ -282,6 +302,30 @@ function HomeContentPage() {
           },
           selectedAlbumIds: [],
           images: [],
+        });
+      }
+      if (zeroFeesData) {
+        setZeroFeesSection({
+          ...zeroFeesData,
+          countries: (zeroFeesData.countries || []).map((country) => ({
+            id: country.id || generateCountryId(),
+            countryCode: country.countryCode || "",
+            name: country.name || { en: "", ar: "" },
+            note: country.note || { en: "", ar: "" },
+          })),
+        });
+      } else {
+        setZeroFeesSection({
+          title: { en: "Zero Fees Shipping", ar: "الشحن بدون رسوم جمركية" },
+          subtitle: {
+            en: "Countries enjoying 0% customs duty through our CEPA agreements.",
+            ar: "الدول التي تستفيد من الإعفاء الجمركي عبر اتفاقيات الشراكة الاقتصادية الشاملة.",
+          },
+          description: {
+            en: "",
+            ar: "",
+          },
+          countries: [],
         });
       }
     } catch (error) {
@@ -695,6 +739,87 @@ function HomeContentPage() {
     setHomeGallerySection(newSection);
   };
 
+  const normalizeZeroFeeCountry = (country: ZeroFeeCountry): ZeroFeeCountry => ({
+    id: country.id || generateCountryId(),
+    countryCode: (country.countryCode || "").toUpperCase(),
+    name: {
+      en: country.name?.en || "",
+      ar: country.name?.ar || "",
+    },
+    note: {
+      en: country.note?.en || "",
+      ar: country.note?.ar || "",
+    },
+  });
+
+  const updateZeroFeesField = (field: "title" | "subtitle" | "description", lang: Language, value: string) => {
+    if (!zeroFeesSection) return;
+    const newSection = { ...zeroFeesSection };
+    newSection[field][lang] = value;
+    setZeroFeesSection(newSection);
+  };
+
+  const addZeroFeesCountry = () => {
+    if (!zeroFeesSection) return;
+    const newSection = { ...zeroFeesSection };
+    newSection.countries = [
+      ...newSection.countries,
+      {
+        id: generateCountryId(),
+        countryCode: "",
+        name: { en: "", ar: "" },
+        note: { en: "", ar: "" },
+      },
+    ];
+    setZeroFeesSection(newSection);
+  };
+
+  const removeZeroFeesCountry = (index: number) => {
+    if (!zeroFeesSection) return;
+    const newSection = { ...zeroFeesSection };
+    newSection.countries.splice(index, 1);
+    setZeroFeesSection(newSection);
+  };
+
+  const updateZeroFeesCountryCode = (index: number, value: string) => {
+    if (!zeroFeesSection) return;
+    const newSection = { ...zeroFeesSection };
+    const formatted = value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2);
+    newSection.countries[index].countryCode = formatted;
+    setZeroFeesSection(newSection);
+  };
+
+  const updateZeroFeesCountryField = (index: number, field: "name" | "note", lang: Language, value: string) => {
+    if (!zeroFeesSection) return;
+    const newSection = { ...zeroFeesSection };
+    if (!newSection.countries[index][field]) {
+      newSection.countries[index][field] = { en: "", ar: "" };
+    }
+    newSection.countries[index][field]![lang] = value;
+    setZeroFeesSection(newSection);
+  };
+
+  const handleSaveZeroFees = async () => {
+    if (!zeroFeesSection) return;
+    setSavingZeroFees(true);
+    try {
+      const cleanedCountries = zeroFeesSection.countries
+        .filter((country) => country.countryCode?.trim())
+        .map((country) => normalizeZeroFeeCountry(country));
+
+      await saveZeroFeesShippingSection({
+        ...zeroFeesSection,
+        countries: cleanedCountries,
+      });
+      alert("Zero Fees Shipping section saved successfully!");
+    } catch (error) {
+      console.error("Error saving zero fees section:", error);
+      alert("Failed to save zero fees section");
+    } finally {
+      setSavingZeroFees(false);
+    }
+  };
+
   const updateField = (
     field: string,
     lang: Language,
@@ -778,6 +903,15 @@ function HomeContentPage() {
                   }`}
               >
                 Why Choose Us
+              </button>
+              <button
+                onClick={() => setActiveTab("zeroFees")}
+                className={`px-4 py-2 font-medium transition-colors ${activeTab === "zeroFees"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
+              >
+                Zero Fees Shipping
               </button>
               <button
                 onClick={() => setActiveTab("trendingProducts")}
@@ -1467,6 +1601,186 @@ function HomeContentPage() {
                   className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingWhyChoose ? "Saving..." : "Save Why Choose Section"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Zero Fees Shipping Section Tab */}
+          {activeTab === "zeroFees" && zeroFeesSection && (
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6">
+                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                  <button
+                    onClick={() => setCurrentLang("en")}
+                    className={`px-4 py-2 font-medium transition-colors ${currentLang === "en"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => setCurrentLang("ar")}
+                    className={`px-4 py-2 font-medium transition-colors ${currentLang === "ar"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    العربية (Arabic)
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Section Title ({currentLang === "en" ? "English" : "Arabic"})
+                    </label>
+                    <input
+                      type="text"
+                      value={zeroFeesSection.title[currentLang] || ""}
+                      onChange={(e) => updateZeroFeesField("title", currentLang, e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., Zero Fees Shipping Countries"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subtitle ({currentLang === "en" ? "English" : "Arabic"})
+                    </label>
+                    <textarea
+                      value={zeroFeesSection.subtitle[currentLang] || ""}
+                      onChange={(e) => updateZeroFeesField("subtitle", currentLang, e.target.value)}
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Highlight the benefits of 0% customs duty agreements"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description ({currentLang === "en" ? "English" : "Arabic"})
+                    </label>
+                    <textarea
+                      value={zeroFeesSection.description[currentLang] || ""}
+                      onChange={(e) => updateZeroFeesField("description", currentLang, e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Add context or supporting copy for this section"
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Countries ({zeroFeesSection.countries.length})
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Provide the ISO 2-letter country code to automatically fetch the flag.
+                      </p>
+                    </div>
+                    <button
+                      onClick={addZeroFeesCountry}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Country
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {zeroFeesSection.countries.map((country, index) => {
+                      const flagUrl = country.countryCode ? findFlagUrlByIso2Code(country.countryCode) : "";
+                      return (
+                        <div key={country.id || index} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                          <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Country {index + 1}
+                            </h3>
+                            <button
+                              onClick={() => removeZeroFeesCountry(index)}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                ISO Code (2 letters)
+                              </label>
+                              <input
+                                type="text"
+                                value={country.countryCode || ""}
+                                onChange={(e) => updateZeroFeesCountryCode(index, e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase tracking-wide"
+                                placeholder="e.g., AE"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Flag Preview
+                              </label>
+                              <div className="h-24 rounded-lg border border-dashed border-gray-300 flex items-center justify-center bg-white">
+                                {flagUrl ? (
+                                  <img src={flagUrl} alt={`${country.countryCode} flag`} className="h-16 object-contain" />
+                                ) : (
+                                  <span className="text-sm text-gray-400">Enter a valid ISO code to load the flag</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Country Name ({currentLang === "en" ? "English" : "Arabic"})
+                              </label>
+                              <input
+                                type="text"
+                                value={country.name?.[currentLang] || ""}
+                                onChange={(e) => updateZeroFeesCountryField(index, "name", currentLang, e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Country display label"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Note / Agreement Details ({currentLang === "en" ? "English" : "Arabic"})
+                              </label>
+                              <textarea
+                                value={country.note?.[currentLang] || ""}
+                                onChange={(e) => updateZeroFeesCountryField(index, "note", currentLang, e.target.value)}
+                                rows={3}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Optional context, e.g., CEPA status"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {zeroFeesSection.countries.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-8">
+                        No countries added yet. Click &quot;Add Country&quot; to start building the list.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveZeroFees}
+                  disabled={savingZeroFees}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingZeroFees ? "Saving..." : "Save Zero Fees Section"}
                 </button>
               </div>
             </div>

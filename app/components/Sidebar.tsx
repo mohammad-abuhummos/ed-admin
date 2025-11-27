@@ -127,6 +127,31 @@ export function Sidebar() {
       ),
     },
     {
+      name: "Website Settings",
+      href: "/website-settings",
+      icon: (
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M10.325 4.317l.671-1.342A1 1 0 0111.93 2h.14a1 1 0 01.934.975l.01.148.672 1.342a1 1 0 00.746.543l1.455.21a1 1 0 01.803.65l.051.132a1 1 0 01-.293 1.06l-1.05.958a1 1 0 00-.29.95l.25 1.43a1 1 0 01-.522 1.06l-.125.062a1 1 0 01-.964-.063L12 10.874l-1.287.677a1 1 0 01-.964.063l-.125-.062a1 1 0 01-.522-1.06l.25-1.43a1 1 0 00-.29-.95l-1.05-.958a1 1 0 01-.293-1.06l.051-.132a1 1 0 01.803-.65l1.455-.21a1 1 0 00.746-.543z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+      ),
+    },
+    {
       name: "Orders",
       href: "/orders",
       icon: (

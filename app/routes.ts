@@ -11,6 +11,7 @@ export default [
   route("gift-products", "routes/gift-products.tsx"),
   route("contact-requests", "routes/contact-requests.tsx"),
   route("gallery", "routes/gallery.tsx"),
+  route("website-settings", "routes/website-settings.tsx"),
   route("news", "routes/news.tsx"),
   route("orders", "routes/orders.tsx"),
 ] satisfies RouteConfig;
