@@ -18,6 +18,8 @@ import {
   saveVideoSection,
   getTrendingProductsSection,
   saveTrendingProductsSection,
+  getGiftProductsSection,
+  saveGiftProductsSection,
   getEventsSection,
   saveEventsSection,
   getHomeGallerySection,
@@ -26,12 +28,14 @@ import {
   saveZeroFeesShippingSection,
   getGallery,
   getProducts,
+  getGiftProducts,
   type HeroSlide,
   type AboutSection,
   type WhyChooseSection,
   type WhyChoosePoint,
   type VideoSection,
   type TrendingProductsSection,
+  type GiftProductsSection,
   type EventsSection,
   type Event,
   type HomeGallerySection,
@@ -41,6 +45,7 @@ import {
   type Country,
   type Album,
   type Product,
+  type GiftProduct,
   type Language,
   type BackgroundType,
 } from "~/lib/content";
@@ -57,16 +62,18 @@ export function meta({ }: Route.MetaArgs) {
 function HomeContentPage() {
   const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"hero" | "video" | "about" | "whyChoose" | "trendingProducts" | "events" | "gallery" | "zeroFees">("hero");
+  const [activeTab, setActiveTab] = useState<"hero" | "video" | "about" | "whyChoose" | "trendingProducts" | "giftProducts" | "events" | "gallery" | "zeroFees">("hero");
   const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [aboutSection, setAboutSection] = useState<AboutSection | null>(null);
   const [whyChooseSection, setWhyChooseSection] = useState<WhyChooseSection | null>(null);
   const [videoSection, setVideoSection] = useState<VideoSection | null>(null);
   const [trendingProductsSection, setTrendingProductsSection] = useState<TrendingProductsSection | null>(null);
+  const [giftProductsSection, setGiftProductsSection] = useState<GiftProductsSection | null>(null);
   const [eventsSection, setEventsSection] = useState<EventsSection | null>(null);
   const [homeGallerySection, setHomeGallerySection] = useState<HomeGallerySection | null>(null);
   const [zeroFeesSection, setZeroFeesSection] = useState<ZeroFeesShippingSection | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [allGiftProducts, setAllGiftProducts] = useState<GiftProduct[]>([]);
   const [allGalleryCountries, setAllGalleryCountries] = useState<Country[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingSlide, setEditingSlide] = useState<HeroSlide | null>(null);
@@ -77,6 +84,7 @@ function HomeContentPage() {
   const [savingWhyChoose, setSavingWhyChoose] = useState(false);
   const [savingVideo, setSavingVideo] = useState(false);
   const [savingTrendingProducts, setSavingTrendingProducts] = useState(false);
+  const [savingGiftProducts, setSavingGiftProducts] = useState(false);
   const [savingEvents, setSavingEvents] = useState(false);
   const [savingHomeGallery, setSavingHomeGallery] = useState(false);
   const generateCountryId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -94,10 +102,12 @@ function HomeContentPage() {
         whyChooseData,
         videoData,
         trendingData,
+        giftSectionData,
         eventsData,
         homeGalleryData,
         zeroFeesData,
         productsData,
+        giftProductsData,
         galleryData,
       ] = await Promise.all([
         getHeroSlides(),
@@ -105,10 +115,12 @@ function HomeContentPage() {
         getWhyChooseSection(),
         getVideoSection(),
         getTrendingProductsSection(),
+        getGiftProductsSection(),
         getEventsSection(),
         getHomeGallerySection(),
         getZeroFeesShippingSection(),
         getProducts(),
+        getGiftProducts(),
         getGallery(),
       ]);
       setSlides(slidesData);
@@ -262,6 +274,7 @@ function HomeContentPage() {
         });
       }
       setAllProducts(productsData);
+      setAllGiftProducts(giftProductsData);
       if (trendingData) {
         setTrendingProductsSection(trendingData);
       } else {
@@ -276,6 +289,21 @@ function HomeContentPage() {
             ar: "",
           },
           productIds: [],
+        });
+      }
+      if (giftSectionData) {
+        setGiftProductsSection(giftSectionData);
+      } else {
+        setGiftProductsSection({
+          title: {
+            en: "",
+            ar: "",
+          },
+          subtitle: {
+            en: "",
+            ar: "",
+          },
+          giftProductIds: [],
         });
       }
       if (eventsData) {
@@ -609,6 +637,40 @@ function HomeContentPage() {
     setTrendingProductsSection(newSection);
   };
 
+  const handleSaveGiftProducts = async () => {
+    if (!giftProductsSection) return;
+
+    setSavingGiftProducts(true);
+    try {
+      await saveGiftProductsSection(giftProductsSection);
+      alert("Gift Products section saved successfully!");
+    } catch (error) {
+      console.error("Error saving gift products section:", error);
+      alert("Failed to save gift products section");
+    } finally {
+      setSavingGiftProducts(false);
+    }
+  };
+
+  const updateGiftProductsField = (field: "title" | "subtitle", lang: Language, value: string) => {
+    if (!giftProductsSection) return;
+    const newSection = { ...giftProductsSection };
+    newSection[field][lang] = value;
+    setGiftProductsSection(newSection);
+  };
+
+  const toggleGiftProductSelection = (giftProductId: string) => {
+    if (!giftProductsSection) return;
+    const newSection = { ...giftProductsSection };
+    const index = newSection.giftProductIds.indexOf(giftProductId);
+    if (index > -1) {
+      newSection.giftProductIds.splice(index, 1);
+    } else {
+      newSection.giftProductIds.push(giftProductId);
+    }
+    setGiftProductsSection(newSection);
+  };
+
   const handleSaveEvents = async () => {
     if (!eventsSection) return;
 
@@ -921,6 +983,15 @@ function HomeContentPage() {
                   }`}
               >
                 Trending Products
+              </button>
+              <button
+                onClick={() => setActiveTab("giftProducts")}
+                className={`px-4 py-2 font-medium transition-colors ${activeTab === "giftProducts"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+                  }`}
+              >
+                Gift Products
               </button>
               <button
                 onClick={() => setActiveTab("events")}
@@ -1929,6 +2000,137 @@ function HomeContentPage() {
           )}
 
           {/* Events Section Tab */}
+          {activeTab === "giftProducts" && giftProductsSection && (
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-white rounded-xl shadow-md border border-blue-100 p-6">
+                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                  <button
+                    onClick={() => setCurrentLang("en")}
+                    className={`px-4 py-2 font-medium transition-colors ${currentLang === "en"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => setCurrentLang("ar")}
+                    className={`px-4 py-2 font-medium transition-colors ${currentLang === "ar"
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    العربية (Arabic)
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Title ({currentLang === "en" ? "English" : "Arabic"})
+                  </label>
+                  <input
+                    type="text"
+                    value={giftProductsSection.title[currentLang] || ""}
+                    onChange={(e) => updateGiftProductsField("title", currentLang, e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subtitle ({currentLang === "en" ? "English" : "Arabic"})
+                  </label>
+                  <textarea
+                    value={giftProductsSection.subtitle[currentLang] || ""}
+                    onChange={(e) => updateGiftProductsField("subtitle", currentLang, e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Select Gift Products ({giftProductsSection.giftProductIds.length} selected)
+                  </label>
+                  {allGiftProducts.length === 0 ? (
+                    <p className="text-sm text-gray-500">No gift products available. Please add gift products first.</p>
+                  ) : (
+                    <div className="border border-gray-300 rounded-lg max-h-96 overflow-y-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                              Select
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                              Image
+                            </th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Gift Product Name
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {allGiftProducts.map((giftProduct) => {
+                            const isSelected = giftProduct.id && giftProductsSection.giftProductIds.includes(giftProduct.id);
+                            const displayName =
+                              giftProduct.name?.[currentLang] ||
+                              giftProduct.name?.en ||
+                              giftProduct.name?.ar ||
+                              "No name";
+                            return (
+                              <tr
+                                key={giftProduct.id}
+                                className={`hover:bg-blue-50 transition-colors cursor-pointer ${isSelected ? "bg-blue-50" : ""}`}
+                                onClick={() => giftProduct.id && toggleGiftProductSelection(giftProduct.id)}
+                              >
+                                <td className="px-4 py-4 whitespace-nowrap">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected || false}
+                                    onChange={() => giftProduct.id && toggleGiftProductSelection(giftProduct.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                  />
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap">
+                                  {giftProduct.image ? (
+                                    <img
+                                      src={giftProduct.image}
+                                      alt={displayName}
+                                      className="h-16 w-16 object-cover rounded-lg"
+                                    />
+                                  ) : (
+                                    <div className="h-16 w-16 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-xs">
+                                      No Image
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-4">
+                                  <div className="text-sm font-medium text-gray-900">{displayName}</div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSaveGiftProducts}
+                  disabled={savingGiftProducts}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingGiftProducts ? "Saving..." : "Save Gift Products Section"}
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === "events" && eventsSection && (
             <div className="max-w-4xl mx-auto space-y-6">
               {/* Language Tabs */}

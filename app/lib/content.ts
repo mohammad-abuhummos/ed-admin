@@ -502,6 +502,43 @@ export const saveTrendingProductsSection = async (trending: TrendingProductsSect
   }
 };
 
+// Gift Products Section
+export interface GiftProductsSection {
+  id?: string;
+  title: Record<Language, string>;
+  subtitle: Record<Language, string>;
+  giftProductIds: string[]; // Array of gift product IDs
+  updatedAt?: any;
+}
+
+export const getGiftProductsSection = async (): Promise<GiftProductsSection | null> => {
+  try {
+    const giftSectionDoc = await getDoc(doc(db, "homeContent", "giftProducts"));
+    if (giftSectionDoc.exists()) {
+      return { id: giftSectionDoc.id, ...giftSectionDoc.data() } as GiftProductsSection;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching gift products section:", error);
+    return null;
+  }
+};
+
+export const saveGiftProductsSection = async (giftSection: GiftProductsSection): Promise<void> => {
+  try {
+    await setDoc(
+      doc(db, "homeContent", "giftProducts"),
+      {
+        ...giftSection,
+        updatedAt: serverTimestamp(),
+      }
+    );
+  } catch (error) {
+    console.error("Error saving gift products section:", error);
+    throw error;
+  }
+};
+
 // Events Section
 export interface Event {
   id?: string;
