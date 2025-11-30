@@ -31,6 +31,8 @@ import {
   getGiftProducts,
   type HeroSlide,
   type AboutSection,
+  type PromiseSection,
+  type PromiseFeature,
   type WhyChooseSection,
   type WhyChoosePoint,
   type VideoSection,
@@ -58,6 +60,268 @@ export function meta({ }: Route.MetaArgs) {
     { name: "description", content: "Manage home page content" },
   ];
 }
+
+const createLocalizedRecord = (en = "", ar = ""): Record<Language, string> => ({
+  en,
+  ar,
+});
+
+const createDefaultPromiseSection = (): PromiseSection => ({
+  badge: {
+    en: "Our Promise",
+    ar: "وعدنا",
+  },
+  title: {
+    en: "Why Choose Emirates Delights",
+    ar: "لماذا تختار طيبات الإمارات",
+  },
+  description: {
+    en: "Simple reasons our partners, hotels, retailers, and families trust us with every harvest and every gift.",
+    ar: "أسباب بسيطة تجعل شركاءنا والفنادق وتجار التجزئة والعائلات يثقون بنا في كل موسم حصاد وكل هدية.",
+  },
+  features: [
+    {
+      icon: "globe-alt",
+      title: {
+        en: "A World of Dates at Your Fingertips",
+        ar: "عالم من التمور بين يديك",
+      },
+      description: {
+        en: "Indulge in a distinguished collection of the world's finest dates, carefully curated and delivered with exceptional quality.",
+        ar: "استمتع بمجموعة مميزة من أجود تمور العالم، ننتقيها بعناية ونوصلها بجودة استثنائية.",
+      },
+    },
+    {
+      icon: "shield-check",
+      title: {
+        en: "Certified Excellence — UAE Standards",
+        ar: "تميز معتمد وفق معايير الإمارات",
+      },
+      description: {
+        en: "Every Emirates Delights product is crafted in full compliance with the UAE's rigorous quality standards, reflecting authenticity and superior taste.",
+        ar: "كل منتج من طيبات الإمارات مصنوع وفق أرقى معايير الجودة الإماراتية، ليعكس أصالة الطعم وتميزه.",
+      },
+    },
+    {
+      icon: "gift",
+      title: {
+        en: "Elegant Packaging for Every Market",
+        ar: "عبوات أنيقة لكل الأسواق",
+      },
+      description: {
+        en: "From luxury hospitality to global retail and wholesale, our packaging solutions are designed to meet the highest international expectations.",
+        ar: "من الضيافة الفاخرة إلى التجزئة والجملة، صممنا حلول التغليف لتلائم أعلى التوقعات العالمية.",
+      },
+    },
+    {
+      icon: "tag",
+      title: {
+        en: "Exclusive Private Label Opportunities",
+        ar: "فرص حصرية للتعبئة بعلامتك الخاصة",
+      },
+      description: {
+        en: "Elevate your brand with our premium private-label packaging, tailored to reflect your unique identity while maintaining the Emirates Delights standard of excellence.",
+        ar: "ارتقِ بعلامتك الخاصة مع حلول تعبئة مخصصة تعكس هويتك وتحافظ على معايير طيبات الإمارات.",
+      },
+    },
+    {
+      icon: "globe-americas",
+      title: {
+        en: "Duty-Free Access to Over 20 Countries",
+        ar: "دخول معفى من الرسوم لأكثر من 20 دولة",
+      },
+      description: {
+        en: "Our products benefit from 0% customs duty in more than 20 countries — opening doors to effortless global expansion.",
+        ar: "تستفيد منتجاتنا من إعفاء جمركي بنسبة 0% في أكثر من 20 دولة، ما يفتح آفاقاً واسعة للتوسع العالمي.",
+      },
+      detail: {
+        en: `Countries Included
+
+CEPA Agreements Currently in Force:
+India, Turkey, Indonesia, Cambodia, Georgia, Costa Rica, Mauritius, Jordan, Serbia
+
+CEPA Signed:
+Colombia, South Korea, Chile, Vietnam, Australia, Eurasia EPA, Malaysia, Kenya, Ukraine, Central African Republic, Congo Brazzaville
+
+CEPA Concluded:
+Morocco, Armenia, Belarus, Azerbaijan, Philippines, Angola`,
+        ar: `الدول المشمولة
+
+اتفاقيات الشراكة الاقتصادية الفعالة:
+الهند، تركيا، إندونيسيا، كمبوديا، جورجيا، كوستاريكا، موريشيوس، الأردن، صربيا
+
+اتفاقيات موقعة:
+كولومبيا، كوريا الجنوبية، تشيلي، فيتنام، أستراليا، الاتحاد الاقتصادي الأوراسي، ماليزيا، كينيا، أوكرانيا، جمهورية أفريقيا الوسطى، الكونغو برازافيل
+
+اتفاقيات قيد الإتمام:
+المغرب، أرمينيا، بيلاروسيا، أذربيجان، الفلبين، أنغولا`,
+      },
+    },
+    {
+      icon: "star",
+      title: {
+        en: "Unmatched Quality and Exquisite Variety",
+        ar: "جودة استثنائية وتنوع فاخر",
+      },
+      description: {
+        en: "We offer a refined selection of grades and flavors, crafted to satisfy even the most discerning palates.",
+        ar: "نقدم مجموعة منتقاة من الدرجات والنكهات لإرضاء أكثر الأذواق تميزاً.",
+      },
+    },
+    {
+      icon: "sparkles",
+      title: {
+        en: "Thoughtful Selections for Every Occasion",
+        ar: "اختيارات مدروسة لكل مناسبة",
+      },
+      description: {
+        en: "Whether for elegant hospitality, memorable gifting, or meaningful charitable giving, our dates are presented with sophistication and care.",
+        ar: "سواء للضيافة أو الهدايا أو المبادرات الخيرية، نعتني بكل تفصيل ليصل تمرنا بأناقة.",
+      },
+    },
+    {
+      icon: "truck",
+      title: {
+        en: "End-to-End Farm & Farmer Services",
+        ar: "خدمات متكاملة للمزارع والمزارعين",
+      },
+      description: {
+        en: "We proudly support local farms and farmers with professional washing, sterilization, and packaging — ensuring unparalleled freshness and quality from harvest to table.",
+        ar: "ندعم المزارع المحلية بخدمات الغسيل والتعقيم والتعبئة لضمان طزاجة وجودة لا تضاهى من الحصاد إلى التقديم.",
+      },
+    },
+  ],
+});
+
+const createDefaultAboutSection = (): AboutSection => ({
+  aboutUs: {
+    title: {
+      en: "Who We Are",
+      ar: "من نحن",
+    },
+    content: {
+      en: `From the city of Al Ain, home to the date farms of the United Arab Emirates, Emirates Delight for Dates was founded twenty years ago. Since then, it has distinguished itself as a pioneer in offering a wide selection of the world's finest date varieties all in one place, bringing them directly to your hands.
+
+Building on the UAE's marketing and logistical advantages and its commitment to world-class quality, the company delivers premium date products sourced from the best cultivation regions to serve all segments of the market — locally, regionally, and internationally.
+
+Emirates Delight for Dates offers packaging solutions designed to suit all market channels — retail, wholesale, catering, gifting, and special occasions — featuring a full range of date types and date-based products such as fresh dates, date syrup, paste, chopped dates, and confectionery, among many others.
+
+Products are available in a wide variety of packages, shapes, and sizes upon request, meeting all customer needs. Each product is manufactured using the latest technologies under the supervision of qualified engineers and specialists in the field of date production.
+
+Emirates Delight for Dates — The world of dates in your hands.`,
+      ar: `من مدينة العين حيث مزارع التمور في الامارات ، تأسست طيبات الامارات للتمور قبل عشرون عاماً وتميزت بكونها الرائدة التي توفر معظم أجود أنواع التمور العالمية في مكان واحد ... لتضعة بين يديك منطلقه من ميزات الامارات التسويقية واللوجستية وتحقيق الجوده العالمية ، لتقدم منتجاتها من التمور من معظم أماكن زراعتها لجميع شرائح السوق ، محلياً واقليمياً وعالمياً
+
+إبتداءً من ( التمور الاماراتية ، السعودية ، العراقية ، التونسية ، الُعُمانية ، الأردنية ، الفلسطينية .. الخ )
+
+وتتميز عبوات التعبأة لطيبات الامارات أنها تتلائم جميع القنوات في السوق ( التجزئة ، الجملة ، التموين ، الهدايا، وجميع المناسبات ) .. بجميع أصناف التمور ومنتجاتها مثل ( الرطب ، الدبس، المعجون ، المقُطع ، وللحلويات) وغيرها الكثير )
+
+وتتوفر بعبوات وأشكال وأحجام حس ب الطلب وتتناسب مع الجميع والتي تصنع بأحدث الأجهزة وتحت إشراف كوادر هندسية متخصصة وكفاءات في مجال تصنيع التمور ..
+
+طيبات الامارات للتمور .. عالم التمور بين يديك`,
+    },
+    backgroundType: "none",
+  },
+  mission: {
+    title: {
+      en: "Our Mission",
+      ar: "الرسالة",
+    },
+    content: {
+      en: "At Tayyibat Al Emarat Dates, our mission is to curate, craft, and deliver the world's finest dates and date-based creations with passion and purpose. We honor the timeless heritage of Arabian dates while embracing innovation, sustainability, and excellence at every stage from cultivation to global distribution. With integrity and dedication at our core, we strive to exceed expectations, build enduring partnerships, and share the natural luxury and wellness of dates with discerning customers across the world.",
+      ar: "مهمتنا في مجموعة طيبات الامارات للتمور هي الحصول على أجود أنواع التمر ومنتجاته وإنتاجها وتوزيعها بشغف للعملاء حول العالم. نحن ملتزمون بالحفاظ على الإرث الغني بالتمور مع تبني الابتكار والاستدامة في جميع عملياتنا. من خلال توفير خدمة لا مثيل لها، والنزاهة، والسعي المستمر نحو التميز، نسعى لتجاوز توقعات العملاء، وتعزيز الشراكات طويلة الأمد، وإثراء الحياة بالفوائد الطبيعية للتمور .",
+    },
+    backgroundType: "none",
+  },
+  vision: {
+    title: {
+      en: "Our Vision",
+      ar: "الرؤية",
+    },
+    content: {
+      en: "To stand as the global symbol of excellence in the world of dates — renowned for exceptional quality, distinguished variety, and an unwavering commitment to perfection. We envision Tayyibat Al Emarat Dates Group as a name synonymous with purity, elegance, and wellbeing — where every date embodies our promise of heritage, innovation, and refined taste, enriching lives and delighting palates worldwide.",
+      ar: "أن تكون طيبات الامارات للتمور الرائد العالمي في تجارة التمور، معروفين بجودتنا الفائقة، وتنوع عروضنا، والتزامنا الثابت بإرضاء العملاء. نتصور عالماً تكون فيه كل ثمرة تمر من مجموعة طيبات الامارات تجسيداً للتميز، تسعد المستهلكين حول العالم وتساهم في مجتمع أكثر صحة وسعادة .",
+    },
+    backgroundType: "none",
+  },
+  promiseSection: createDefaultPromiseSection(),
+});
+
+type AboutContentBlock = AboutSection["aboutUs"];
+
+const mergeLocalizedRecord = (
+  base: Record<Language, string>,
+  incoming?: Record<Language, string>
+): Record<Language, string> => ({
+  en: incoming?.en ?? base.en,
+  ar: incoming?.ar ?? base.ar,
+});
+
+const mergeAboutContentBlock = (base: AboutContentBlock, incoming?: AboutContentBlock): AboutContentBlock => {
+  if (!incoming) {
+    return base;
+  }
+
+  return {
+    ...base,
+    ...incoming,
+    title: mergeLocalizedRecord(base.title, incoming.title),
+    content: mergeLocalizedRecord(base.content, incoming.content),
+  };
+};
+
+const normalizePromiseFeature = (feature?: PromiseFeature, fallback?: PromiseFeature): PromiseFeature => {
+  const baseTitle = fallback?.title ?? createLocalizedRecord();
+  const baseDescription = fallback?.description ?? createLocalizedRecord();
+  const shouldIncludeDetail = Boolean(feature?.detail || fallback?.detail);
+
+  const normalized: PromiseFeature = {
+    title: mergeLocalizedRecord(baseTitle, feature?.title),
+    description: mergeLocalizedRecord(baseDescription, feature?.description),
+    icon: feature?.icon ?? fallback?.icon ?? "",
+  };
+
+  if (shouldIncludeDetail) {
+    const baseDetail = fallback?.detail ?? createLocalizedRecord();
+    normalized.detail = mergeLocalizedRecord(baseDetail, feature?.detail);
+  }
+
+  return normalized;
+};
+
+const mergePromiseSection = (base: PromiseSection, incoming?: PromiseSection): PromiseSection => {
+  if (!incoming) {
+    return base;
+  }
+
+  const hasCustomFeatures = Array.isArray(incoming.features) && incoming.features.length > 0;
+  const sourceFeatures = hasCustomFeatures ? incoming.features : base.features;
+  const fallbackFeatures = base.features.length ? base.features : createDefaultPromiseSection().features;
+
+  return {
+    badge: mergeLocalizedRecord(base.badge, incoming.badge),
+    title: mergeLocalizedRecord(base.title, incoming.title),
+    description: mergeLocalizedRecord(base.description, incoming.description),
+    features: sourceFeatures.map((feature, index) =>
+      normalizePromiseFeature(feature, fallbackFeatures[index])
+    ),
+  };
+};
+
+const buildAboutSectionState = (incoming?: AboutSection | null): AboutSection => {
+  const defaults = createDefaultAboutSection();
+  if (!incoming) {
+    return defaults;
+  }
+
+  return {
+    ...defaults,
+    ...incoming,
+    aboutUs: mergeAboutContentBlock(defaults.aboutUs, incoming.aboutUs),
+    mission: mergeAboutContentBlock(defaults.mission, incoming.mission),
+    vision: mergeAboutContentBlock(defaults.vision, incoming.vision),
+    promiseSection: mergePromiseSection(defaults.promiseSection, incoming.promiseSection),
+  };
+};
 
 function HomeContentPage() {
   const { currentUser, userData } = useAuth();
@@ -124,46 +388,7 @@ function HomeContentPage() {
         getGallery(),
       ]);
       setSlides(slidesData);
-      if (aboutData) {
-        setAboutSection(aboutData);
-      } else {
-        // Initialize with seed content
-        setAboutSection({
-          aboutUs: {
-            title: {
-              en: "Who We Are",
-              ar: "من نحن",
-            },
-            content: {
-              en: "From the city of Al Ain, home to the date farms of the United Arab Emirates, Emirates Delight for Dates was founded twenty years ago. Since then, it has distinguished itself as a pioneer in offering a wide selection of the world's finest date varieties all in one place, bringing them directly to your hands.\n\nBuilding on the UAE's marketing and logistical advantages and its commitment to world-class quality, the company delivers premium date products sourced from the best cultivation regions to serve all segments of the market — locally, regionally, and internationally.\n\nEmirates Delight for Dates offers packaging solutions designed to suit all market channels — retail, wholesale, catering, gifting, and special occasions — featuring a full range of date types and date-based products such as fresh dates, date syrup, paste, chopped dates, and confectionery, among many others.\n\nProducts are available in a wide variety of packages, shapes, and sizes upon request, meeting all customer needs. Each product is manufactured using the latest technologies under the supervision of qualified engineers and specialists in the field of date production.\n\nEmirates Delight for Dates — The world of dates in your hands.",
-              ar: "من مدينة العين حيث مزارع التمور في الامارات ، تأسست طيبات الامارات للتمور قبل عشرون عاماً وتميزت بكونها الرائدة التي توفر معظم أجود أنواع التمور العالمية في مكان واحد ... لتضعة بين يديك منطلقه من ميزات الامارات التسويقية واللوجستية وتحقيق الجوده العالمية ، لتقدم منتجاتها من التمور من معظم أماكن زراعتها لجميع شرائح السوق ، محلياً واقليمياً وعالمياً\n\nإبتداءً من ( التمور الاماراتية ، السعودية ، العراقية ، التونسية ، الُعُمانية ، الأردنية ، الفلسطينية .. الخ )\n\nوتتميز عبوات التعبأة لطيبات الامارات أنها تتلائم جميع القنوات في السوق ( التجزئة ، الجملة ، التموين ، الهدايا، وجميع المناسبات ) .. بجميع أصناف التمور ومنتجاتها مثل ( الرطب ، الدبس، المعجون ، المقُطع ، وللحلويات) وغيرها الكثير )\n\nوتتوفر بعبوات وأشكال وأحجام حس ب الطلب وتتناسب مع الجميع والتي تصنع بأحدث الأجهزة وتحت إشراف كوادر هندسية متخصصة وكفاءات في مجال تصنيع التمور ..\n\nطيبات الامارات للتمور .. عالم التمور بين يديك",
-            },
-            backgroundType: "none",
-          },
-          mission: {
-            title: {
-              en: "Our Mission",
-              ar: "الرسالة",
-            },
-            content: {
-              en: "At Tayyibat Al Emarat Dates, our mission is to curate, craft, and deliver the world's finest dates and date-based creations with passion and purpose. We honor the timeless heritage of Arabian dates while embracing innovation, sustainability, and excellence at every stage from cultivation to global distribution. With integrity and dedication at our core, we strive to exceed expectations, build enduring partnerships, and share the natural luxury and wellness of dates with discerning customers across the world.",
-              ar: "مهمتنا في مجموعة طيبات الامارات للتمور هي الحصول على أجود أنواع التمر ومنتجاته وإنتاجها وتوزيعها بشغف للعملاء حول العالم. نحن ملتزمون بالحفاظ على الإرث الغني بالتمور مع تبني الابتكار والاستدامة في جميع عملياتنا. من خلال توفير خدمة لا مثيل لها، والنزاهة، والسعي المستمر نحو التميز، نسعى لتجاوز توقعات العملاء، وتعزيز الشراكات طويلة الأمد، وإثراء الحياة بالفوائد الطبيعية للتمور .",
-            },
-            backgroundType: "none",
-          },
-          vision: {
-            title: {
-              en: "Our Vision",
-              ar: "الرؤية",
-            },
-            content: {
-              en: "To stand as the global symbol of excellence in the world of dates — renowned for exceptional quality, distinguished variety, and an unwavering commitment to perfection. We envision Tayyibat Al Emarat Dates Group as a name synonymous with purity, elegance, and wellbeing — where every date embodies our promise of heritage, innovation, and refined taste, enriching lives and delighting palates worldwide.",
-              ar: "أن تكون طيبات الامارات للتمور الرائد العالمي في تجارة التمور، معروفين بجودتنا الفائقة، وتنوع عروضنا، والتزامنا الثابت بإرضاء العملاء. نتصور عالماً تكون فيه كل ثمرة تمر من مجموعة طيبات الامارات تجسيداً للتميز، تسعد المستهلكين حول العالم وتساهم في مجتمع أكثر صحة وسعادة .",
-            },
-            backgroundType: "none",
-          },
-        });
-      }
+      setAboutSection(buildAboutSectionState(aboutData));
       if (whyChooseData) {
         setWhyChooseSection(whyChooseData);
       } else {
@@ -517,6 +742,88 @@ function HomeContentPage() {
     const newSection = { ...aboutSection };
     newSection[section][field][lang] = value;
     setAboutSection(newSection);
+  };
+
+  const updatePromiseSectionField = (field: "badge" | "title" | "description", lang: Language, value: string) => {
+    if (!aboutSection?.promiseSection) return;
+    const updatedPromiseSection = {
+      ...aboutSection.promiseSection,
+      [field]: {
+        ...aboutSection.promiseSection[field],
+        [lang]: value,
+      },
+    };
+    setAboutSection({ ...aboutSection, promiseSection: updatedPromiseSection });
+  };
+
+  const updatePromiseFeatureField = (
+    index: number,
+    field: "title" | "description" | "detail",
+    lang: Language,
+    value: string
+  ) => {
+    if (!aboutSection?.promiseSection) return;
+    const features = [...aboutSection.promiseSection.features];
+    const feature = { ...features[index] };
+
+    if (field === "title" || field === "description") {
+      feature[field] = {
+        ...feature[field],
+        [lang]: value,
+      };
+    } else if (field === "detail") {
+      feature.detail = {
+        ...(feature.detail || createLocalizedRecord()),
+        [lang]: value,
+      };
+    }
+
+    features[index] = feature;
+    setAboutSection({
+      ...aboutSection,
+      promiseSection: { ...aboutSection.promiseSection, features },
+    });
+  };
+
+  const updatePromiseFeatureIcon = (index: number, value: string) => {
+    if (!aboutSection?.promiseSection) return;
+    const features = [...aboutSection.promiseSection.features];
+    features[index] = {
+      ...features[index],
+      icon: value,
+    };
+
+    setAboutSection({
+      ...aboutSection,
+      promiseSection: { ...aboutSection.promiseSection, features },
+    });
+  };
+
+  const addPromiseFeature = () => {
+    if (!aboutSection?.promiseSection) return;
+    const newFeature: PromiseFeature = {
+      title: createLocalizedRecord(),
+      description: createLocalizedRecord(),
+      detail: createLocalizedRecord(),
+      icon: "",
+    };
+
+    setAboutSection({
+      ...aboutSection,
+      promiseSection: {
+        ...aboutSection.promiseSection,
+        features: [...aboutSection.promiseSection.features, newFeature],
+      },
+    });
+  };
+
+  const removePromiseFeature = (index: number) => {
+    if (!aboutSection?.promiseSection) return;
+    const features = aboutSection.promiseSection.features.filter((_, idx) => idx !== index);
+    setAboutSection({
+      ...aboutSection,
+      promiseSection: { ...aboutSection.promiseSection, features },
+    });
   };
 
   const handleSaveWhyChoose = async () => {
@@ -1555,6 +1862,151 @@ function HomeContentPage() {
                       </div>
                     </div>
                   </div>
+                {aboutSection.promiseSection && (
+                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 space-y-6">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Our Promise Highlights</h3>
+                        <p className="text-sm text-gray-600">
+                          Control the badge, heading, and feature cards that appear in the About section.
+                        </p>
+                      </div>
+                      <button
+                        onClick={addPromiseFeature}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                      >
+                        + Add Highlight
+                      </button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Badge Text ({currentLang === "en" ? "English" : "Arabic"})
+                        </label>
+                        <input
+                          type="text"
+                          value={aboutSection.promiseSection.badge[currentLang] || ""}
+                          onChange={(e) => updatePromiseSectionField("badge", currentLang, e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Section Title ({currentLang === "en" ? "English" : "Arabic"})
+                        </label>
+                        <input
+                          type="text"
+                          value={aboutSection.promiseSection.title[currentLang] || ""}
+                          onChange={(e) => updatePromiseSectionField("title", currentLang, e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Section Description ({currentLang === "en" ? "English" : "Arabic"})
+                      </label>
+                      <textarea
+                        value={aboutSection.promiseSection.description[currentLang] || ""}
+                        onChange={(e) => updatePromiseSectionField("description", currentLang, e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {aboutSection.promiseSection.features.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                        No highlights yet. Click &ldquo;Add Highlight&rdquo; to create one.
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        {aboutSection.promiseSection.features.map((feature, index) => (
+                          <div
+                            key={index}
+                            className="rounded-xl border border-amber-100 bg-white p-5 shadow-xs space-y-4"
+                          >
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">Highlight {index + 1}</p>
+                                <p className="text-xs text-gray-500">
+                                  Provide the card icon key, title, and description.
+                                </p>
+                              </div>
+                              <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                                    Icon Key (optional)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={feature.icon || ""}
+                                    onChange={(e) => updatePromiseFeatureIcon(index, e.target.value)}
+                                    className="w-36 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="e.g., globe-alt"
+                                  />
+                                  <p className="text-[0.65rem] text-gray-500 mt-1">
+                                    Match the front-end icon map (GlobeAlt, ShieldCheck, etc.)
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => removePromiseFeature(index)}
+                                  className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Title ({currentLang === "en" ? "English" : "Arabic"})
+                                </label>
+                                <input
+                                  type="text"
+                                  value={feature.title[currentLang] || ""}
+                                  onChange={(e) => updatePromiseFeatureField(index, "title", currentLang, e.target.value)}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Description ({currentLang === "en" ? "English" : "Arabic"})
+                                </label>
+                                <textarea
+                                  value={feature.description[currentLang] || ""}
+                                  onChange={(e) =>
+                                    updatePromiseFeatureField(index, "description", currentLang, e.target.value)
+                                  }
+                                  rows={3}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Additional Detail / Countries (optional)
+                                  {" "}
+                                  ({currentLang === "en" ? "English" : "Arabic"})
+                                </label>
+                                <textarea
+                                  value={feature.detail?.[currentLang] || ""}
+                                  onChange={(e) =>
+                                    updatePromiseFeatureField(index, "detail", currentLang, e.target.value)
+                                  }
+                                  rows={4}
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Use this field for country lists or supporting copy"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 </div>
               </div>
 

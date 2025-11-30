@@ -319,6 +319,20 @@ export const seedProducts = async (): Promise<void> => {
 // About Section
 export type BackgroundType = "none" | "image" | "video";
 
+export interface PromiseFeature {
+  title: Record<Language, string>;
+  description: Record<Language, string>;
+  detail?: Record<Language, string>;
+  icon?: string;
+}
+
+export interface PromiseSection {
+  badge: Record<Language, string>;
+  title: Record<Language, string>;
+  description: Record<Language, string>;
+  features: PromiseFeature[];
+}
+
 export interface AboutSection {
   id?: string;
   aboutUs: {
@@ -343,6 +357,7 @@ export interface AboutSection {
     backgroundVideo?: string;
   };
   updatedAt?: any;
+  promiseSection?: PromiseSection;
 }
 
 export const getAboutSection = async (): Promise<AboutSection | null> => {
