@@ -4,6 +4,15 @@ import { db, storage } from "./firebase";
 
 export type Language = "en" | "ar";
 
+const slugify = (text: string): string =>
+  text
+    .toString()
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .toLowerCase();
+
 const deleteStorageFileByUrl = async (fileUrl?: string) => {
   if (!fileUrl || typeof fileUrl !== "string" || !fileUrl.startsWith("http")) {
     return;
@@ -128,6 +137,7 @@ export interface Product {
   images: string[];
   packageSize?: string;
   grade?: string;
+  categoryId?: string;
   price?: number;
   createdAt?: any;
   updatedAt?: any;
@@ -312,6 +322,183 @@ export const seedProducts = async (): Promise<void> => {
     console.log(`Successfully seeded ${productsData.length} products`);
   } catch (error) {
     console.error("Error seeding products:", error);
+    throw error;
+  }
+};
+
+// Product Categories
+export interface ProductCategory {
+  id?: string;
+  name: Record<Language, string>;
+  description: Record<Language, string>;
+  slug: string;
+  href: string;
+  iconKey: string;
+  order: number;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | "updatedAt">> = [
+  {
+    name: { en: "Medjool Dates", ar: "تمر المجهول" },
+    description: { en: "Premium quality dates", ar: "تمور عالية الجودة" },
+    slug: "medjool-dates",
+    href: "/products",
+    iconKey: "medjool-dates",
+    order: 1,
+  },
+  {
+    name: { en: "Date Paste", ar: "معجون التمر" },
+    description: { en: "Smooth & creamy", ar: "معجون ناعم وكريمي" },
+    slug: "date-paste",
+    href: "/products",
+    iconKey: "date-paste",
+    order: 2,
+  },
+  {
+    name: { en: "Rutab Dates", ar: "تمر رطب" },
+    description: { en: "Fresh & soft", ar: "طازجة وطرية" },
+    slug: "rutab-dates",
+    href: "/products",
+    iconKey: "rutab-dates",
+    order: 3,
+  },
+  {
+    name: { en: "Holy Land Dates", ar: "تمور الأرض المقدسة" },
+    description: { en: "Sacred & blessed", ar: "مباركة ومقدسة" },
+    slug: "holy-land-dates",
+    href: "/products",
+    iconKey: "holy-land-dates",
+    order: 4,
+  },
+  {
+    name: { en: "Vacuumed Dates", ar: "تمور مفرغة الهواء" },
+    description: { en: "Sealed freshness", ar: "طزاجة مختومة" },
+    slug: "vacuumed-dates",
+    href: "/products",
+    iconKey: "vacuumed-dates",
+    order: 5,
+  },
+  {
+    name: { en: "Dates Syrup", ar: "دبس التمر" },
+    description: { en: "Natural sweetener", ar: "محلي طبيعي" },
+    slug: "dates-syrup",
+    href: "/products",
+    iconKey: "dates-syrup",
+    order: 6,
+  },
+  {
+    name: { en: "Dates with Chocolate", ar: "تمور بالشوكولاتة" },
+    description: { en: "Sweet indulgence", ar: "متعة حلوة بالشوكولاتة" },
+    slug: "dates-with-chocolate",
+    href: "/products",
+    iconKey: "dates-with-chocolate",
+    order: 7,
+  },
+  {
+    name: { en: "Dates with Nuts", ar: "تمور بالمكسرات" },
+    description: { en: "Crunchy delight", ar: "قرمشة لذيذة" },
+    slug: "dates-with-nuts",
+    href: "/products",
+    iconKey: "dates-with-nuts",
+    order: 8,
+  },
+  {
+    name: { en: "Dates with Fruit", ar: "تمور بالفواكه" },
+    description: { en: "Fruity fusion", ar: "مزيج فاكهي" },
+    slug: "dates-with-fruit",
+    href: "/products",
+    iconKey: "dates-with-fruit",
+    order: 9,
+  },
+  {
+    name: { en: "AQSA Dates", ar: "تمور الأقصى" },
+    description: { en: "Premium selection", ar: "اختيار فاخر" },
+    slug: "aqsa-dates",
+    href: "/products",
+    iconKey: "aqsa-dates",
+    order: 10,
+  },
+];
+
+const sanitizeCategoryPayload = (category: ProductCategory) => {
+  const { id, ...rest } = category;
+  const slug = slugify(category.slug || category.name?.en || category.name?.ar || "category");
+  return {
+    ...rest,
+    slug,
+    iconKey: category.iconKey || "medjool-dates",
+    href: category.href || "/products",
+    order: typeof category.order === "number" ? category.order : 1,
+  };
+};
+
+export const getProductCategories = async (): Promise<ProductCategory[]> => {
+  try {
+    const categoriesQuery = query(collection(db, "productCategories"), orderBy("order", "asc"));
+    const querySnapshot = await getDocs(categoriesQuery);
+    const categories: ProductCategory[] = [];
+    querySnapshot.forEach((docSnapshot) => {
+      categories.push({ id: docSnapshot.id, ...docSnapshot.data() } as ProductCategory);
+    });
+    return categories;
+  } catch (error) {
+    console.error("Error fetching product categories:", error);
+    return [];
+  }
+};
+
+export const saveProductCategory = async (category: ProductCategory): Promise<void> => {
+  try {
+    const payload = sanitizeCategoryPayload(category);
+    if (category.id) {
+      await setDoc(
+        doc(db, "productCategories", category.id),
+        {
+          ...payload,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else {
+      const newSlug = payload.slug || slugify(payload.name.en);
+      const docRef = doc(db, "productCategories", newSlug);
+      await setDoc(docRef, {
+        ...payload,
+        slug: newSlug,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error("Error saving product category:", error);
+    throw error;
+  }
+};
+
+export const deleteProductCategory = async (categoryId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, "productCategories", categoryId));
+  } catch (error) {
+    console.error("Error deleting product category:", error);
+    throw error;
+  }
+};
+
+export const seedProductCategories = async (): Promise<void> => {
+  try {
+    for (const category of productCategorySeedData) {
+      const docRef = doc(db, "productCategories", category.slug);
+      await setDoc(docRef, {
+        ...category,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+    console.log(`Successfully seeded ${productCategorySeedData.length} product categories`);
+  } catch (error) {
+    console.error("Error seeding product categories:", error);
     throw error;
   }
 };
@@ -1021,6 +1208,8 @@ export interface GiftProduct {
   id?: string;
   name: Record<Language, string>;
   image: string;
+  packageSize?: string;
+  grade?: string;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -1100,12 +1289,74 @@ export const deleteGiftProduct = async (giftProductId: string): Promise<void> =>
   }
 };
 
+export const seedGiftProducts = async (): Promise<void> => {
+  const imageUrl = "https://firebasestorage.googleapis.com/v0/b/emiratesd-29ff7.firebasestorage.app/o/products%2F1763300395206-1.png?alt=media&token=dd38f7dc-08bb-441d-a0ac-d5b6238bcff3";
+
+  const giftProductsData = [
+    {
+      name: { en: "Premium Gift Box", ar: "صندوق هدايا ممتاز" },
+      image: imageUrl,
+      packageSize: "1kg, 2kg, 3kg, 5kg, 10kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Deluxe Gift Set", ar: "مجموعة هدايا فاخرة" },
+      image: imageUrl,
+      packageSize: "1kg, 2kg, 3kg, 5kg, 10kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+    {
+      name: { en: "Luxury Date Collection", ar: "مجموعة التمور الفاخرة" },
+      image: imageUrl,
+      packageSize: "1kg, 2kg, 3kg, 5kg, 10kg",
+      grade: "Grade 1, Grade 2, Grade 3",
+    },
+  ];
+
+  try {
+    // Get existing gift products
+    const existingProducts = await getGiftProducts();
+
+    // Only seed if there are no existing products
+    if (existingProducts.length === 0) {
+      for (const giftProduct of giftProductsData) {
+        await setDoc(doc(collection(db, "giftProducts")), {
+          ...giftProduct,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`Successfully seeded ${giftProductsData.length} gift products`);
+    } else {
+      // Update existing products to include packageSize and grade if they don't have them
+      for (const existingProduct of existingProducts) {
+        if (!existingProduct.packageSize || !existingProduct.grade) {
+          await setDoc(
+            doc(db, "giftProducts", existingProduct.id!),
+            {
+              ...existingProduct,
+              packageSize: existingProduct.packageSize || "1kg, 2kg, 3kg, 5kg, 10kg",
+              grade: existingProduct.grade || "Grade 1, Grade 2, Grade 3",
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        }
+      }
+      console.log(`Updated ${existingProducts.length} existing gift products with packageSize and grade`);
+    }
+  } catch (error) {
+    console.error("Error seeding gift products:", error);
+    throw error;
+  }
+};
+
 // News Management
 export interface NewsArticle {
   id?: string;
-  title: string;
-  description: string;
-  contentHtml: string;
+  title: Record<Language, string>;
+  description: Record<Language, string>;
+  contentHtml: Record<Language, string>;
   coverImage: string;
   gallery: string[];
   publishDate?: string;
@@ -1131,9 +1382,9 @@ export const getNews = async (): Promise<NewsArticle[]> => {
 export const saveNews = async (news: NewsArticle): Promise<void> => {
   try {
     const baseData = {
-      title: news.title,
-      description: news.description,
-      contentHtml: news.contentHtml,
+      title: news.title || { en: "", ar: "" },
+      description: news.description || { en: "", ar: "" },
+      contentHtml: news.contentHtml || { en: "", ar: "" },
       coverImage: news.coverImage,
       gallery: news.gallery || [],
       publishDate: news.publishDate || null,

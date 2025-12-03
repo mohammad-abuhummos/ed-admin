@@ -10,10 +10,11 @@ import {
   saveNews,
   uploadImage,
   type NewsArticle,
+  type Language,
 } from "~/lib/content";
 import type { Route } from "./+types/news";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
     { title: "News - Emirates Delights Admin" },
     { name: "description", content: "Manage news articles" },
@@ -73,6 +74,7 @@ function NewsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [currentLang, setCurrentLang] = useState<Language>("en");
 
   useEffect(() => {
     fetchNews();
@@ -81,7 +83,33 @@ function NewsPage() {
   const fetchNews = async () => {
     try {
       const data = await getNews();
-      setNewsItems(data);
+      // Migrate old data format (string) to new format (Record<Language, string>)
+      const migratedData = data.map((article) => {
+        // Check if title is a string (old format)
+        if (typeof article.title === "string") {
+          const migrated: NewsArticle = {
+            ...article,
+            title: { en: article.title as any, ar: "" },
+            description: typeof article.description === "string"
+              ? { en: article.description as any, ar: "" }
+              : (article.description || { en: "", ar: "" }),
+            contentHtml: typeof article.contentHtml === "string"
+              ? { en: article.contentHtml as any, ar: "" }
+              : (article.contentHtml || { en: "", ar: "" }),
+          };
+          // Save migrated article back to database
+          saveNews(migrated).catch(err => console.error("Error migrating article:", err));
+          return migrated;
+        }
+        // Ensure new format has all required fields
+        return {
+          ...article,
+          title: article.title || { en: "", ar: "" },
+          description: article.description || { en: "", ar: "" },
+          contentHtml: article.contentHtml || { en: "", ar: "" },
+        };
+      });
+      setNewsItems(migratedData);
     } catch (error) {
       console.error("Error fetching news:", error);
       alert("Failed to load news articles");
@@ -98,24 +126,48 @@ function NewsPage() {
   const handleAddArticle = () => {
     const today = new Date();
     setEditingArticle({
-      title: "",
-      description: "",
-      contentHtml: "",
+      title: { en: "", ar: "" },
+      description: { en: "", ar: "" },
+      contentHtml: { en: "", ar: "" },
       coverImage: "",
       gallery: [],
       publishDate: today.toISOString().split("T")[0],
     });
+    setCurrentLang("en");
     setIsModalOpen(true);
   };
 
   const handleEditArticle = (article: NewsArticle) => {
+    // Migrate old format if needed
+    let migratedArticle: NewsArticle;
+    if (typeof article.title === "string") {
+      migratedArticle = {
+        ...article,
+        title: { en: article.title as any, ar: "" },
+        description: typeof article.description === "string"
+          ? { en: article.description as any, ar: "" }
+          : (article.description || { en: "", ar: "" }),
+        contentHtml: typeof article.contentHtml === "string"
+          ? { en: article.contentHtml as any, ar: "" }
+          : (article.contentHtml || { en: "", ar: "" }),
+      };
+    } else {
+      migratedArticle = {
+        ...article,
+        title: article.title || { en: "", ar: "" },
+        description: article.description || { en: "", ar: "" },
+        contentHtml: article.contentHtml || { en: "", ar: "" },
+      };
+    }
+
     setEditingArticle({
-      ...article,
-      gallery: article.gallery || [],
-      publishDate: typeof article.publishDate === "string" && article.publishDate.includes("-")
-        ? article.publishDate
-        : toInputDate(article.publishDate || article.createdAt),
+      ...migratedArticle,
+      gallery: migratedArticle.gallery || [],
+      publishDate: typeof migratedArticle.publishDate === "string" && migratedArticle.publishDate.includes("-")
+        ? migratedArticle.publishDate
+        : toInputDate(migratedArticle.publishDate || migratedArticle.createdAt),
     });
+    setCurrentLang("en");
     setIsModalOpen(true);
   };
 
@@ -181,18 +233,20 @@ function NewsPage() {
   const handleSaveArticle = async () => {
     if (!editingArticle) return;
 
-    if (!editingArticle.title.trim()) {
-      alert("Title is required");
+    if (!editingArticle.title.en?.trim() && !editingArticle.title.ar?.trim()) {
+      alert("Title is required in at least one language");
       return;
     }
 
-    if (!editingArticle.description.trim()) {
-      alert("Description is required");
+    if (!editingArticle.description.en?.trim() && !editingArticle.description.ar?.trim()) {
+      alert("Description is required in at least one language");
       return;
     }
 
-    if (!editingArticle.contentHtml || getPlainText(editingArticle.contentHtml).length === 0) {
-      alert("Please add the article content");
+    const enContent = editingArticle.contentHtml.en || "";
+    const arContent = editingArticle.contentHtml.ar || "";
+    if (getPlainText(enContent).length === 0 && getPlainText(arContent).length === 0) {
+      alert("Please add the article content in at least one language");
       return;
     }
 
@@ -286,7 +340,10 @@ function NewsPage() {
           ) : (
             <div className="grid gap-6">
               {newsItems.map((article) => {
-                const preview = getPlainText(article.contentHtml || "");
+                const title = article.title?.en || article.title?.ar || "No title";
+                const description = article.description?.en || article.description?.ar || "";
+                const contentHtml = article.contentHtml?.en || article.contentHtml?.ar || "";
+                const preview = getPlainText(contentHtml);
                 const previewText = preview.length > 180 ? `${preview.slice(0, 180)}…` : preview;
                 return (
                   <article
@@ -297,7 +354,7 @@ function NewsPage() {
                       <div className="relative h-64 w-full">
                         <img
                           src={article.coverImage}
-                          alt={article.title}
+                          alt={title}
                           className="h-full w-full object-cover"
                         />
                         <span className="absolute top-4 left-4 bg-white/90 text-sm font-medium text-gray-800 px-3 py-1 rounded-full shadow">
@@ -307,8 +364,8 @@ function NewsPage() {
                     )}
                     <div className="p-6 space-y-4">
                       <div>
-                        <h2 className="text-2xl font-semibold text-gray-900">{article.title}</h2>
-                        <p className="text-gray-600 mt-1">{article.description}</p>
+                        <h2 className="text-2xl font-semibold text-gray-900">{title}</h2>
+                        {description && <p className="text-gray-600 mt-1">{description}</p>}
                       </div>
                       {previewText && (
                         <p className="text-sm text-gray-500 bg-gray-50 border border-gray-100 rounded-xl p-4">
@@ -349,6 +406,8 @@ function NewsPage() {
       {isModalOpen && editingArticle && (
         <NewsEditModal
           article={editingArticle}
+          currentLang={currentLang}
+          onLangChange={setCurrentLang}
           uploading={uploading}
           onCoverUpload={handleCoverUpload}
           onGalleryUpload={handleGalleryUpload}
@@ -367,6 +426,8 @@ function NewsPage() {
 
 interface NewsEditModalProps {
   article: NewsArticle;
+  currentLang: Language;
+  onLangChange: (lang: Language) => void;
   uploading: boolean;
   onCoverUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onGalleryUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -378,6 +439,8 @@ interface NewsEditModalProps {
 
 function NewsEditModal({
   article,
+  currentLang,
+  onLangChange,
   uploading,
   onCoverUpload,
   onGalleryUpload,
@@ -405,26 +468,64 @@ function NewsEditModal({
             </button>
           </div>
 
+          {/* Language Tabs */}
+          <div className="flex gap-2 mb-6 border-b border-gray-200">
+            <button
+              onClick={() => onLangChange("en")}
+              className={`px-4 py-2 font-medium transition-colors ${currentLang === "en"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
+            >
+              English
+            </button>
+            <button
+              onClick={() => onLangChange("ar")}
+              className={`px-4 py-2 font-medium transition-colors ${currentLang === "ar"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
+            >
+              العربية (Arabic)
+            </button>
+          </div>
+
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Title ({currentLang === "en" ? "English" : "Arabic"}) *
+              </label>
               <input
                 type="text"
-                value={article.title}
-                onChange={(e) => onUpdate({ ...article, title: e.target.value })}
+                value={article.title?.[currentLang] || ""}
+                onChange={(e) => onUpdate({
+                  ...article,
+                  title: {
+                    ...article.title,
+                    [currentLang]: e.target.value,
+                  },
+                })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter article title"
+                placeholder={currentLang === "en" ? "Enter article title" : "أدخل عنوان المقال"}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Short Description *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Short Description ({currentLang === "en" ? "English" : "Arabic"}) *
+              </label>
               <textarea
                 rows={3}
-                value={article.description}
-                onChange={(e) => onUpdate({ ...article, description: e.target.value })}
+                value={article.description?.[currentLang] || ""}
+                onChange={(e) => onUpdate({
+                  ...article,
+                  description: {
+                    ...article.description,
+                    [currentLang]: e.target.value,
+                  },
+                })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter a concise summary for the article"
+                placeholder={currentLang === "en" ? "Enter a concise summary for the article" : "أدخل ملخصًا موجزًا للمقال"}
               />
             </div>
 
@@ -490,11 +591,19 @@ function NewsEditModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rich Text Content *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rich Text Content ({currentLang === "en" ? "English" : "Arabic"}) *
+              </label>
               <RichTextEditor
-                value={article.contentHtml || ""}
-                onChange={(value) => onUpdate({ ...article, contentHtml: value })}
-                placeholder="Write the full article content here..."
+                value={article.contentHtml?.[currentLang] || ""}
+                onChange={(value) => onUpdate({
+                  ...article,
+                  contentHtml: {
+                    ...article.contentHtml,
+                    [currentLang]: value,
+                  },
+                })}
+                placeholder={currentLang === "en" ? "Write the full article content here..." : "اكتب محتوى المقال الكامل هنا..."}
               />
             </div>
           </div>

@@ -10,6 +10,9 @@ import {
   deleteProduct,
   uploadImage,
   seedProducts,
+  getProductCategories,
+  seedProductCategories,
+  type ProductCategory,
   type Product,
   type Language,
 } from "~/lib/content";
@@ -22,10 +25,76 @@ export function meta({ }: Route.MetaArgs) {
   ];
 }
 
+interface PillInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+function PillInput({ value, onChange, placeholder }: PillInputProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  const pills = value
+    ? value.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === "Enter" || e.key === ",") && inputValue.trim()) {
+      e.preventDefault();
+      const newPill = inputValue.trim();
+      if (!pills.includes(newPill)) {
+        const updatedPills = [...pills, newPill];
+        onChange(updatedPills.join(", "));
+      }
+      setInputValue("");
+    } else if (e.key === "Backspace" && !inputValue && pills.length > 0) {
+      // Remove last pill when backspace is pressed on empty input
+      const updatedPills = pills.slice(0, -1);
+      onChange(updatedPills.join(", "));
+    }
+  };
+
+  const handleRemovePill = (index: number) => {
+    const updatedPills = pills.filter((_, i) => i !== index);
+    onChange(updatedPills.join(", "));
+  };
+
+  return (
+    <div className="w-full min-h-[48px] px-3 py-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent bg-white flex flex-wrap gap-2 items-center">
+      {pills.map((pill, index) => (
+        <span
+          key={index}
+          className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium border border-blue-200"
+        >
+          {pill}
+          <button
+            type="button"
+            onClick={() => handleRemovePill(index)}
+            className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={pills.length === 0 ? placeholder : ""}
+        className="flex-1 min-w-[120px] outline-none bg-transparent text-sm"
+      />
+    </div>
+  );
+}
+
 function ProductsPage() {
   const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,15 +102,25 @@ function ProductsPage() {
   const [currentLang, setCurrentLang] = useState<Language>("en");
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const data = await getProducts();
-      setProducts(data);
+      const [productsData, categoriesInitial] = await Promise.all([
+        getProducts(),
+        getProductCategories(),
+      ]);
+      let categoryData = categoriesInitial;
+      if (categoryData.length === 0) {
+        await seedProductCategories();
+        categoryData = await getProductCategories();
+      }
+      setProducts(productsData);
+      setCategories(categoryData);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      console.error("Error fetching products data:", error);
     } finally {
       setLoading(false);
     }
@@ -60,6 +139,7 @@ function ProductsPage() {
       images: [],
       packageSize: "",
       grade: "",
+      categoryId: categories[0]?.id || "",
     });
     setIsModalOpen(true);
   };
@@ -73,7 +153,7 @@ function ProductsPage() {
     if (confirm("Are you sure you want to delete this product?")) {
       try {
         await deleteProduct(productId);
-        await fetchProducts();
+        await fetchData();
       } catch (error) {
         console.error("Error deleting product:", error);
         alert("Failed to delete product");
@@ -130,10 +210,14 @@ function ProductsPage() {
     if (!editingProduct) return;
 
     try {
-      await saveProduct(editingProduct);
+      const payload: Product = {
+        ...editingProduct,
+        categoryId: editingProduct.categoryId || undefined,
+      };
+      await saveProduct(payload);
       setIsModalOpen(false);
       setEditingProduct(null);
-      await fetchProducts();
+      await fetchData();
     } catch (error) {
       console.error("Error saving product:", error);
       alert("Failed to save product");
@@ -159,7 +243,7 @@ function ProductsPage() {
       try {
         setLoading(true);
         await seedProducts();
-        await fetchProducts();
+        await fetchData();
         alert("Products seeded successfully!");
       } catch (error) {
         console.error("Error seeding products:", error);
@@ -258,6 +342,9 @@ function ProductsPage() {
                         Name
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
                         Package Size
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
@@ -305,6 +392,15 @@ function ProductsPage() {
                             <div className="text-xs text-gray-500 line-clamp-2 max-w-xs">
                               {product.description.en || product.description.ar || "No description"}
                             </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {product.categoryId ? (
+                              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                                {categories.find((cat) => cat.id === product.categoryId)?.name.en || "Category"}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">Unassigned</span>
+                            )}
                           </td>
                           <td className="px-6 py-4">
                             {packageSizes.length > 0 ? (
@@ -384,6 +480,7 @@ function ProductsPage() {
         <ProductEditModal
           product={editingProduct}
           currentLang={currentLang}
+          categories={categories}
           onLangChange={setCurrentLang}
           onClose={() => {
             setIsModalOpen(false);
@@ -405,6 +502,7 @@ function ProductsPage() {
 interface ProductEditModalProps {
   product: Product;
   currentLang: Language;
+  categories: ProductCategory[];
   onLangChange: (lang: Language) => void;
   onClose: () => void;
   onSave: () => void;
@@ -419,6 +517,7 @@ interface ProductEditModalProps {
 function ProductEditModal({
   product,
   currentLang,
+  categories,
   onLangChange,
   onClose,
   onSave,
@@ -494,6 +593,33 @@ function ProductEditModal({
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder={currentLang === "en" ? "Enter product name" : "أدخل اسم المنتج"}
               />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category
+              </label>
+              <select
+                value={product.categoryId || ""}
+                onChange={(e) =>
+                  onUpdate({
+                    ...product,
+                    categoryId: e.target.value || undefined,
+                  })
+                }
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">{categories.length ? "Select category" : "No categories available"}</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name[currentLang] || category.name.en}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Manage categories under the Product Categories section.
+              </p>
             </div>
 
             {/* Description */}
@@ -577,15 +703,13 @@ function ProductEditModal({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Package Size (Optional)
                 </label>
-                <input
-                  type="text"
+                <PillInput
                   value={product.packageSize || ""}
-                  onChange={(e) => {
+                  onChange={(value) => {
                     const newProduct = { ...product };
-                    newProduct.packageSize = e.target.value;
+                    newProduct.packageSize = value;
                     onUpdate(newProduct);
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="e.g., 500g, 1kg"
                 />
               </div>
@@ -593,15 +717,13 @@ function ProductEditModal({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Grade (Optional)
                 </label>
-                <input
-                  type="text"
+                <PillInput
                   value={product.grade || ""}
-                  onChange={(e) => {
+                  onChange={(value) => {
                     const newProduct = { ...product };
-                    newProduct.grade = e.target.value;
+                    newProduct.grade = value;
                     onUpdate(newProduct);
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="e.g., Premium, Standard"
                 />
               </div>

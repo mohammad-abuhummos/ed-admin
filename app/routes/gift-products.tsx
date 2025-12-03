@@ -9,6 +9,7 @@ import {
   saveGiftProduct,
   deleteGiftProduct,
   uploadImage,
+  seedGiftProducts,
   type GiftProduct,
   type Language,
 } from "~/lib/content";
@@ -19,6 +20,71 @@ export function meta({ }: Route.MetaArgs) {
     { title: "Gift Products - Emirates Delights Admin" },
     { name: "description", content: "Manage gift products" },
   ];
+}
+
+interface PillInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+function PillInput({ value, onChange, placeholder }: PillInputProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  const pills = value
+    ? value.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.key === "Enter" || e.key === ",") && inputValue.trim()) {
+      e.preventDefault();
+      const newPill = inputValue.trim();
+      if (!pills.includes(newPill)) {
+        const updatedPills = [...pills, newPill];
+        onChange(updatedPills.join(", "));
+      }
+      setInputValue("");
+    } else if (e.key === "Backspace" && !inputValue && pills.length > 0) {
+      // Remove last pill when backspace is pressed on empty input
+      const updatedPills = pills.slice(0, -1);
+      onChange(updatedPills.join(", "));
+    }
+  };
+
+  const handleRemovePill = (index: number) => {
+    const updatedPills = pills.filter((_, i) => i !== index);
+    onChange(updatedPills.join(", "));
+  };
+
+  return (
+    <div className="w-full min-h-[48px] px-3 py-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent bg-white flex flex-wrap gap-2 items-center">
+      {pills.map((pill, index) => (
+        <span
+          key={index}
+          className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium border border-blue-200"
+        >
+          {pill}
+          <button
+            type="button"
+            onClick={() => handleRemovePill(index)}
+            className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={pills.length === 0 ? placeholder : ""}
+        className="flex-1 min-w-[120px] outline-none bg-transparent text-sm"
+      />
+    </div>
+  );
 }
 
 function GiftProductsPage() {
@@ -37,7 +103,15 @@ function GiftProductsPage() {
 
   const fetchGiftProducts = async () => {
     try {
-      const data = await getGiftProducts();
+      let data = await getGiftProducts();
+      // Seed gift products with packageSize and grade if needed
+      if (data.length > 0) {
+        const needsSeeding = data.some(p => !p.packageSize || !p.grade);
+        if (needsSeeding) {
+          await seedGiftProducts();
+          data = await getGiftProducts();
+        }
+      }
       setGiftProducts(data);
     } catch (error) {
       console.error("Error fetching gift products:", error);
@@ -55,6 +129,8 @@ function GiftProductsPage() {
     setEditingGiftProduct({
       name: { en: "", ar: "" },
       image: "",
+      packageSize: "",
+      grade: "",
     });
     setIsModalOpen(true);
   };
@@ -222,9 +298,44 @@ function GiftProductsPage() {
                       {giftProduct.name.en || giftProduct.name.ar || "No name"}
                     </h3>
                     {(giftProduct.name.en && giftProduct.name.ar) && (
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-gray-600 mb-2">
                         {giftProduct.name.en !== giftProduct.name.ar ? giftProduct.name.ar : ""}
                       </p>
+                    )}
+                    {/* Package Size and Grade */}
+                    {(giftProduct.packageSize || giftProduct.grade) && (
+                      <div className="mb-3 space-y-2">
+                        {giftProduct.packageSize && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Package Size:</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {giftProduct.packageSize.split(",").map((size, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                                >
+                                  {size.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {giftProduct.grade && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Grade:</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {giftProduct.grade.split(",").map((grade, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
+                                >
+                                  {grade.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                     <div className="flex gap-2">
                       <button
@@ -332,21 +443,19 @@ function GiftProductEditModal({
           <div className="flex gap-2 mb-6 border-b border-gray-200">
             <button
               onClick={() => onLangChange("en")}
-              className={`px-4 py-2 font-medium transition-colors ${
-                currentLang === "en"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-4 py-2 font-medium transition-colors ${currentLang === "en"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
             >
               English
             </button>
             <button
               onClick={() => onLangChange("ar")}
-              className={`px-4 py-2 font-medium transition-colors ${
-                currentLang === "ar"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-4 py-2 font-medium transition-colors ${currentLang === "ar"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
             >
               العربية (Arabic)
             </button>
@@ -387,6 +496,38 @@ function GiftProductEditModal({
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
               />
               {uploading && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
+            </div>
+
+            {/* Package Size and Grade */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Package Size (Optional)
+                </label>
+                <PillInput
+                  value={giftProduct.packageSize || ""}
+                  onChange={(value) => {
+                    const newGiftProduct = { ...giftProduct };
+                    newGiftProduct.packageSize = value;
+                    onUpdate(newGiftProduct);
+                  }}
+                  placeholder="e.g., 1kg, 2kg, 3kg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Grade (Optional)
+                </label>
+                <PillInput
+                  value={giftProduct.grade || ""}
+                  onChange={(value) => {
+                    const newGiftProduct = { ...giftProduct };
+                    newGiftProduct.grade = value;
+                    onUpdate(newGiftProduct);
+                  }}
+                  placeholder="e.g., Grade 1, Grade 2"
+                />
+              </div>
             </div>
 
             {/* Actions */}
