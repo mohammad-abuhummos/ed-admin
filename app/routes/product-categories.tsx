@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { findFlagUrlByIso2Code } from "country-flags-svg";
 import { useNavigate } from "react-router";
 import { ProtectedRoute } from "~/components/ProtectedRoute";
 import { Sidebar } from "~/components/Sidebar";
@@ -117,6 +118,32 @@ const iconOptions = Object.entries(categoryIcons).map(([key, icon]) => ({
   icon,
 }));
 
+const flagOptions = [
+  { code: "AE", label: "United Arab Emirates" },
+  { code: "SA", label: "Saudi Arabia" },
+  { code: "IQ", label: "Iraq" },
+  { code: "TN", label: "Tunisia" },
+  { code: "OM", label: "Oman" },
+];
+
+const getFlagUrl = (code?: string | null) => {
+  if (!code) return "";
+  try {
+    const trimmed = code.trim();
+    if (!trimmed) return "";
+    return findFlagUrlByIso2Code(trimmed.toUpperCase());
+  } catch {
+    return "";
+  }
+};
+
+const withCategoryDefaults = (category: ProductCategory): ProductCategory => ({
+  ...category,
+  iconKey: category.iconKey || iconOptions[0]?.key || "medjool-dates",
+  visualType: category.visualType || (category.flagCode ? "flag" : "icon"),
+  flagCode: category.flagCode || "",
+});
+
 function ProductCategoriesPage() {
   const { userData } = useAuth();
   const navigate = useNavigate();
@@ -139,7 +166,7 @@ function ProductCategoriesPage() {
         await seedProductCategories();
         data = await getProductCategories();
       }
-      setCategories(data);
+      setCategories(data.map(withCategoryDefaults));
     } catch (error) {
       console.error("Error fetching categories:", error);
     } finally {
@@ -153,20 +180,24 @@ function ProductCategoriesPage() {
   };
 
   const handleAddCategory = () => {
-    setEditingCategory({
-      name: { en: "", ar: "" },
-      description: { en: "", ar: "" },
-      slug: "",
-      href: "/products",
-      iconKey: iconOptions[0]?.key || "medjool-dates",
-      order: categories.length + 1,
-    });
+    setEditingCategory(
+      withCategoryDefaults({
+        name: { en: "", ar: "" },
+        description: { en: "", ar: "" },
+        slug: "",
+        href: "/products",
+        iconKey: iconOptions[0]?.key || "medjool-dates",
+        order: categories.length + 1,
+        visualType: "icon",
+        flagCode: "",
+      })
+    );
     setCurrentLang("en");
     setIsModalOpen(true);
   };
 
   const handleEditCategory = (category: ProductCategory) => {
-    setEditingCategory({ ...category });
+    setEditingCategory(withCategoryDefaults(category));
     setIsModalOpen(true);
   };
 
@@ -218,7 +249,11 @@ function ProductCategoriesPage() {
 
   const updateCategoryField = (field: keyof ProductCategory, value: any) => {
     if (!editingCategory) return;
-    setEditingCategory({ ...editingCategory, [field]: value });
+    let nextValue = value;
+    if (field === "flagCode" && typeof value === "string") {
+      nextValue = value.replace(/[^a-z]/gi, "").slice(0, 2).toUpperCase();
+    }
+    setEditingCategory({ ...editingCategory, [field]: nextValue });
   };
 
   const sortedCategories = useMemo(
@@ -288,7 +323,7 @@ function ProductCategoriesPage() {
                   <thead className="bg-gradient-to-r from-blue-600 to-blue-700">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                        Icon
+                        Visual
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">
                         Name
@@ -305,15 +340,26 @@ function ProductCategoriesPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {sortedCategories.map((category) => (
-                      <tr key={category.id} className="hover:bg-blue-50 transition-all duration-200">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="h-16 w-16 rounded-xl bg-amber-50 flex items-center justify-center shadow-inner border border-amber-100">
-                            {category.iconKey && categoryIcons[category.iconKey]
-                              ? categoryIcons[category.iconKey]
-                              : categoryIcons["medjool-dates"]}
-                          </div>
-                        </td>
+                    {sortedCategories.map((category) => {
+                      const flagUrl = getFlagUrl(category.flagCode);
+                      const showFlag = category.visualType === "flag" && flagUrl;
+                      return (
+                        <tr key={category.id} className="hover:bg-blue-50 transition-all duration-200">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="h-16 w-20 rounded-xl bg-amber-50 flex items-center justify-center shadow-inner border border-amber-100 overflow-hidden">
+                              {showFlag ? (
+                                <img
+                                  src={flagUrl}
+                                  alt={`${category.flagCode || "flag"} flag`}
+                                  className="h-12 w-16 object-cover rounded-lg border border-amber-200 shadow-sm"
+                                />
+                              ) : category.iconKey && categoryIcons[category.iconKey] ? (
+                                categoryIcons[category.iconKey]
+                              ) : (
+                                categoryIcons["medjool-dates"]
+                              )}
+                            </div>
+                          </td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-semibold text-gray-900">
                             {category.name.en || category.name.ar || "Unnamed"}
@@ -355,7 +401,8 @@ function ProductCategoriesPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                   </tbody>
                 </table>
               </div>
@@ -407,6 +454,8 @@ function CategoryModal({
   updateField,
   saving,
 }: CategoryModalProps) {
+  const flagPreviewUrl = getFlagUrl(category.flagCode);
+  const isFlagSelected = category.visualType === "flag";
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
@@ -509,33 +558,135 @@ function CategoryModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Icon Style
+                Visual Style
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {iconOptions.map(({ key, icon }) => {
-                  const active = category.iconKey === key;
-                  const label = key.replace(/-/g, " ");
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => updateField("iconKey", key)}
-                      className={`p-3 rounded-xl border transition-all ${active
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
-                        }`}
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="h-16 w-16 flex items-center justify-center rounded-lg bg-white">{icon}</div>
-                        <span className="text-xs font-medium capitalize text-center">
-                          {label}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateField("visualType", "icon")}
+                  className={`px-4 py-2 rounded-lg border font-medium transition-colors ${!isFlagSelected
+                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                    }`}
+                >
+                  Illustrated Icon
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField("visualType", "flag")}
+                  className={`px-4 py-2 rounded-lg border font-medium transition-colors ${isFlagSelected
+                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
+                    }`}
+                >
+                  Country Flag
+                </button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Choose whether this category is represented by a hand-drawn icon or a country flag badge.
+              </p>
             </div>
+
+            {isFlagSelected ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Flag Selection
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ISO Code (2 letters)
+                    </label>
+                    <input
+                      type="text"
+                      value={category.flagCode || ""}
+                      onChange={(e) => updateField("flagCode", e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase tracking-widest"
+                      placeholder="e.g. AE"
+                      maxLength={2}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Example: AE for United Arab Emirates, SA for Saudi Arabia.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Flag Preview
+                    </label>
+                    <div className="h-24 rounded-lg border border-dashed border-gray-300 flex items-center justify-center bg-white">
+                      {flagPreviewUrl ? (
+                        <img
+                          src={flagPreviewUrl}
+                          alt={`${category.flagCode || "flag"} flag preview`}
+                          className="h-16 object-contain"
+                        />
+                      ) : (
+                        <span className="text-sm text-gray-400">
+                          Enter a valid ISO code to load the flag.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Quick picks</p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {flagOptions.map((option) => {
+                    const optionFlagUrl = getFlagUrl(option.code);
+                    const active = (category.flagCode || "").toUpperCase() === option.code;
+                    return (
+                      <button
+                        key={option.code}
+                        type="button"
+                        onClick={() => updateField("flagCode", option.code)}
+                        className={`p-3 rounded-xl border transition-all ${active
+                          ? "border-blue-500 bg-blue-50 shadow-sm"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
+                      >
+                        <div className="h-12 w-full flex items-center justify-center bg-white rounded-lg mb-2 overflow-hidden">
+                          {optionFlagUrl ? (
+                            <img src={optionFlagUrl} alt={`${option.label} flag`} className="h-10 object-contain" />
+                          ) : (
+                            <span className="text-xs font-semibold uppercase">{option.code}</span>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-center block">{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Icon Style
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {iconOptions.map(({ key, icon }) => {
+                    const active = category.iconKey === key;
+                    const label = key.replace(/-/g, " ");
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => updateField("iconKey", key)}
+                        className={`p-3 rounded-xl border transition-all ${active
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                          }`}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-16 w-16 flex items-center justify-center rounded-lg bg-white">{icon}</div>
+                          <span className="text-xs font-medium capitalize text-center">
+                            {label}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

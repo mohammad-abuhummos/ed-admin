@@ -335,6 +335,8 @@ export interface ProductCategory {
   href: string;
   iconKey: string;
   order: number;
+  visualType?: "icon" | "flag";
+  flagCode?: string | null;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -347,6 +349,7 @@ const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | 
     href: "/products",
     iconKey: "medjool-dates",
     order: 1,
+    visualType: "icon",
   },
   {
     name: { en: "Date Paste", ar: "معجون التمر" },
@@ -355,22 +358,7 @@ const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | 
     href: "/products",
     iconKey: "date-paste",
     order: 2,
-  },
-  {
-    name: { en: "Rutab Dates", ar: "تمر رطب" },
-    description: { en: "Fresh & soft", ar: "طازجة وطرية" },
-    slug: "rutab-dates",
-    href: "/products",
-    iconKey: "rutab-dates",
-    order: 3,
-  },
-  {
-    name: { en: "Holy Land Dates", ar: "تمور الأرض المقدسة" },
-    description: { en: "Sacred & blessed", ar: "مباركة ومقدسة" },
-    slug: "holy-land-dates",
-    href: "/products",
-    iconKey: "holy-land-dates",
-    order: 4,
+    visualType: "icon",
   },
   {
     name: { en: "Vacuumed Dates", ar: "تمور مفرغة الهواء" },
@@ -378,7 +366,8 @@ const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | 
     slug: "vacuumed-dates",
     href: "/products",
     iconKey: "vacuumed-dates",
-    order: 5,
+    order: 3,
+    visualType: "icon",
   },
   {
     name: { en: "Dates Syrup", ar: "دبس التمر" },
@@ -386,7 +375,8 @@ const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | 
     slug: "dates-syrup",
     href: "/products",
     iconKey: "dates-syrup",
-    order: 6,
+    order: 4,
+    visualType: "icon",
   },
   {
     name: { en: "Dates with Chocolate", ar: "تمور بالشوكولاتة" },
@@ -394,7 +384,8 @@ const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | 
     slug: "dates-with-chocolate",
     href: "/products",
     iconKey: "dates-with-chocolate",
-    order: 7,
+    order: 5,
+    visualType: "icon",
   },
   {
     name: { en: "Dates with Nuts", ar: "تمور بالمكسرات" },
@@ -402,7 +393,8 @@ const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | 
     slug: "dates-with-nuts",
     href: "/products",
     iconKey: "dates-with-nuts",
-    order: 8,
+    order: 6,
+    visualType: "icon",
   },
   {
     name: { en: "Dates with Fruit", ar: "تمور بالفواكه" },
@@ -410,27 +402,77 @@ const productCategorySeedData: Array<Omit<ProductCategory, "id" | "createdAt" | 
     slug: "dates-with-fruit",
     href: "/products",
     iconKey: "dates-with-fruit",
-    order: 9,
+    order: 7,
+    visualType: "icon",
   },
   {
-    name: { en: "AQSA Dates", ar: "تمور الأقصى" },
-    description: { en: "Premium selection", ar: "اختيار فاخر" },
-    slug: "aqsa-dates",
+    name: { en: "Saudi Dates", ar: "تمور سعودية" },
+    description: { en: "Signature Saudi date varieties", ar: "أجود أصناف التمور السعودية" },
+    slug: "saudi-dates",
     href: "/products",
-    iconKey: "aqsa-dates",
+    iconKey: "medjool-dates",
+    order: 8,
+    visualType: "flag",
+    flagCode: "SA",
+  },
+  {
+    name: { en: "Emirati Dates", ar: "تمور إماراتية" },
+    description: { en: "Premium dates from the UAE", ar: "أفخر أنواع التمور الإماراتية" },
+    slug: "emirati-dates",
+    href: "/products",
+    iconKey: "medjool-dates",
+    order: 9,
+    visualType: "flag",
+    flagCode: "AE",
+  },
+  {
+    name: { en: "Iraqi Dates", ar: "تمور عراقية" },
+    description: { en: "Historic varieties from Iraq", ar: "أصناف عريقة من العراق" },
+    slug: "iraqi-dates",
+    href: "/products",
+    iconKey: "medjool-dates",
     order: 10,
+    visualType: "flag",
+    flagCode: "IQ",
+  },
+  {
+    name: { en: "Tunisian Dates", ar: "تمور تونسية" },
+    description: { en: "North African Deglet Noor & more", ar: "أشهى أصناف التمور التونسية" },
+    slug: "tunisian-dates",
+    href: "/products",
+    iconKey: "medjool-dates",
+    order: 11,
+    visualType: "flag",
+    flagCode: "TN",
+  },
+  {
+    name: { en: "Omani Dates", ar: "تمور عمانية" },
+    description: { en: "Sun-ripened dates from Oman", ar: "تمور مشمسة فاخرة من عمان" },
+    slug: "omani-dates",
+    href: "/products",
+    iconKey: "medjool-dates",
+    order: 12,
+    visualType: "flag",
+    flagCode: "OM",
   },
 ];
 
+const retiredProductCategorySlugs = ["rutab-dates", "holy-land-dates", "aqsa-dates"];
+
 const sanitizeCategoryPayload = (category: ProductCategory) => {
   const { id, ...rest } = category;
-  const slug = slugify(category.slug || category.name?.en || category.name?.ar || "category");
+  const slug = slugify(rest.slug || rest.name?.en || rest.name?.ar || "category");
+  const normalizedFlagCode = rest.flagCode?.trim().toUpperCase();
+  const wantsFlag = rest.visualType === "flag" || (!rest.visualType && !!normalizedFlagCode);
+  const visualType: "icon" | "flag" = wantsFlag && normalizedFlagCode ? "flag" : "icon";
   return {
     ...rest,
     slug,
-    iconKey: category.iconKey || "medjool-dates",
-    href: category.href || "/products",
-    order: typeof category.order === "number" ? category.order : 1,
+    iconKey: rest.iconKey || "medjool-dates",
+    href: rest.href || "/products",
+    order: typeof rest.order === "number" ? rest.order : 1,
+    visualType,
+    flagCode: visualType === "flag" ? normalizedFlagCode : null,
   };
 };
 
@@ -488,6 +530,18 @@ export const deleteProductCategory = async (categoryId: string): Promise<void> =
 
 export const seedProductCategories = async (): Promise<void> => {
   try {
+    if (retiredProductCategorySlugs.length > 0) {
+      await Promise.all(
+        retiredProductCategorySlugs.map(async (slug) => {
+          try {
+            await deleteDoc(doc(db, "productCategories", slug));
+          } catch (error) {
+            console.warn(`Unable to delete retired category ${slug}:`, error);
+          }
+        })
+      );
+    }
+
     for (const category of productCategorySeedData) {
       const docRef = doc(db, "productCategories", category.slug);
       await setDoc(docRef, {
